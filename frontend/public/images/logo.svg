@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="logo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="24" fill="url(#logo)"/>
+  <!-- Ticket shape -->
+  <rect x="40" y="60" width="120" height="80" rx="8" fill="rgba(255,255,255,0.9)"/>
+  <circle cx="40" cy="100" r="10" fill="url(#logo)"/>
+  <circle cx="160" cy="100" r="10" fill="url(#logo)"/>
+  <line x1="70" y1="60" x2="70" y2="140" stroke="rgba(99,102,241,0.3)" stroke-width="2" stroke-dasharray="4,4"/>
+  <text x="115" y="107" fill="#6366f1" font-family="Arial,sans-serif" font-size="16" font-weight="bold" text-anchor="middle">TW</text>
+</svg>

@@ -1,0 +1,34 @@
+# Environment files (contain secrets)
+env.ps1
+.env
+.env.*
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.log
+*.hprof
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Node (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# Build outputs
+*.bak
+*.tmp

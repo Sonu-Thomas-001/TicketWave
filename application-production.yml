@@ -1,0 +1,263 @@
+# Production-Grade Configuration for TicketWave
+# Apply these settings to improve performance, reliability, and monitoring
+
+spring:
+  application:
+    name: ticketwave
+
+  # ==========================================
+  # JPA / Hibernate Configuration
+  # ==========================================
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use Flyway for schema management
+    
+    properties:
+      hibernate:
+        # Enable batch operations - CRITICAL for N+1 fix
+        jdbc:
+          batch_size: 50  # Batch inserts/updates
+          fetch_size: 50  # JDBC fetch size
+        order_inserts: true  # Order inserts for batching
+        order_updates: true  # Order updates for batching
+        batch_versioned_data: true  # Batch operations for @Version entities
+        
+        # Query optimization
+        default_batch_fetch_size: 16  # Batch lazy load associations
+        query:
+          in_clause_parameter_padding: true  # Optimize IN clause
+        
+        # Performance monitoring (dev/staging only)
+        generate_statistics: false  # Enable in non-prod for metrics
+        
+        # Connection settings
+        connection:
+          provider_disables_autocommit: true  # Let Hikari manage commits
+        
+        # Logging (disable in production)
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+
+  # ==========================================
+  # Database Connection Pool (HikariCP)
+  # ==========================================
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      # Pool sizing
+      maximum-pool-size: 20  # Max connections (adjust based on load)
+      minimum-idle: 5  # Min idle connections
+      
+      # Timeouts
+      connection-timeout: 30000  # 30 seconds
+      idle-timeout: 600000  # 10 minutes
+      max-lifetime: 1800000  # 30 minutes
+      
+      # Leak detection (production safety)
+      leak-detection-threshold: 60000  # 60 seconds - alerts on connection leaks
+      
+      # Connection testing
+      connection-test-query: SELECT 1
+      validation-timeout: 5000  # 5 seconds
+      
+      # Performance
+      auto-commit: false  # Let Spring manage transactions
+      
+      # Monitoring
+      pool-name: TicketWaveHikariPool
+      register-mbeans: true  # Enable JMX monitoring
+
+  # ==========================================
+  # Redis Configuration (Lettuce)
+  # ==========================================
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      
+      timeout: 2000ms  # Command timeout
+      
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 20  # Max connections
+          max-idle: 10  # Max idle connections
+          min-idle: 5  # Min idle connections
+          max-wait: 2000ms  # Max wait time for connection
+        
+        shutdown-timeout: 100ms
+        
+        # Cluster configuration (if using Redis cluster)
+        # cluster:
+        #   refresh:
+        #     adaptive: true
+        #     period: 60s
+
+  # ==========================================
+  # Security Configuration
+  # ==========================================
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-this-in-production}
+      expiration: 86400000  # 24 hours in milliseconds
+      refresh-expiration: 604800000  # 7 days
+
+# ==========================================
+# TicketWave Business Configuration
+# ==========================================
+ticketwave:
+  # Seat hold settings
+  seat-hold:
+    ttl-seconds: 600  # 10 minutes
+    lock-wait-seconds: 2
+    lock-lease-seconds: 5
+  
+  # Refund settings
+  refund:
+    max-concurrent-processing: 100
+    auto-approve-within-hours: 1
+  
+  # Payment gateway
+  payment:
+    gateway-url: ${PAYMENT_GATEWAY_URL:https://payment.example.com}
+    webhook-secret: ${PAYMENT_WEBHOOK_SECRET:change-this}
+    timeout-seconds: 30
+    max-retries: 3
+  
+  # Rate limiting
+  rate-limit:
+    booking-per-minute: 10  # Max bookings per user per minute
+    api-calls-per-minute: 100  # Max API calls per IP per minute
+
+# ==========================================
+# Logging Configuration
+# ==========================================
+logging:
+  level:
+    root: INFO
+    com.ticketwave: INFO
+    
+    # Hibernate logging (disable in production)
+    org.hibernate.SQL: ERROR
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+    
+    # Spring Framework
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    
+    # Connection pool
+    com.zaxxer.hikari: INFO
+    
+    # Redis
+    io.lettuce: INFO
+  
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n"
+  
+  file:
+    name: logs/ticketwave.log
+    max-size: 10MB
+    max-history: 30
+    total-size-cap: 1GB
+
+# ==========================================
+# Actuator / Monitoring
+# ==========================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+      base-path: /actuator
+  
+  endpoint:
+    health:
+      show-details: when-authorized  # Hide details from public
+      probes:
+        enabled: true  # Kubernetes health checks
+  
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    
+    tags:
+      application: ${spring.application.name}
+      environment: ${SPRING_PROFILES_ACTIVE:default}
+  
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+
+# ==========================================
+# Server Configuration
+# ==========================================
+server:
+  port: 8080
+  
+  servlet:
+    context-path: /api/v1
+    session:
+      timeout: 30m
+  
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+  
+  error:
+    include-message: always
+    include-binding-errors: never  # Don't leak validation details
+    include-stacktrace: never  # Never expose stack traces
+    include-exception: false
+
+  # Tomcat tuning
+  tomcat:
+    threads:
+      max: 200  # Max request threads
+      min-spare: 10  # Min spare threads
+    
+    connection-timeout: 20000  # 20 seconds
+    
+    max-connections: 10000  # Max concurrent connections
+    accept-count: 100  # Queue size when max connections reached
+
+# ==========================================
+# Profile-Specific Configurations
+# ==========================================
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.ticketwave: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: WARN
+    com.ticketwave: INFO
+
+server:
+  error:
+    include-message: never  # Don't expose messages in production

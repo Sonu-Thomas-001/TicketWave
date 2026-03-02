@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ticketwave
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ticketwave}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:ticketwave-super-secret-key-ticketwave}
+    issuer: ${JWT_ISSUER:ticketwave}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  pricing:
+    high-demand-threshold: ${PRICING_HIGH_DEMAND_THRESHOLD:0.3}
+    base-modifier: ${PRICING_BASE_MODIFIER:1.0}
+    high-demand-multiplier: ${PRICING_HIGH_DEMAND_MULTIPLIER:1.5}
+    low-availability-multiplier: ${PRICING_LOW_AVAILABILITY_MULTIPLIER:1.8}
+  seat-hold:
+    duration-seconds: ${SEAT_HOLD_DURATION_SECONDS:600}
+  booking:
+    pnr-length: ${BOOKING_PNR_LENGTH:10}
+    max-retries: ${BOOKING_MAX_RETRIES:3}
+    payment-timeout-minutes: ${BOOKING_PAYMENT_TIMEOUT_MINUTES:60}
+  payment:
+    intent-ttl-hours: ${PAYMENT_INTENT_TTL_HOURS:1}
+    webhook-timeout-seconds: ${PAYMENT_WEBHOOK_TIMEOUT_SECONDS:30}
+    provider: ${PAYMENT_PROVIDER:stub}
+  idempotency:
+    ttl-hours: ${IDEMPOTENCY_TTL_HOURS:24}
+  refund:
+    max-concurrent-processing: ${REFUND_MAX_CONCURRENT_PROCESSING:100}
+    auto-approve-within-hours: ${REFUND_AUTO_APPROVE_WITHIN_HOURS:1}
+    stalled-processing-hours: ${REFUND_STALLED_PROCESSING_HOURS:24}
+
+logging:
+  level:
+    root: INFO
+    com.ticketwave: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
