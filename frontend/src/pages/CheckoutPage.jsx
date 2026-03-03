@@ -100,7 +100,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({ seatIds: selectedSeats.map((s) => s.id) }),
       });
       const holdData = await holdRes.json();
-      if (!holdData.success || !holdData.data) {
+      if (!holdRes.ok || !holdData.success || !holdData.data) {
         throw new Error(holdData.message || 'Failed to hold seats');
       }
 

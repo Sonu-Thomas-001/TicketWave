@@ -232,15 +232,29 @@ public class ScheduleSearchController {
         log.info("Hold request: userId={} scheduleId={} seats={}", userId, scheduleId, seatIds.size());
 
         List<Map<String, Object>> holds = new ArrayList<>();
-        for (String seatIdStr : seatIds) {
-            UUID seatId = UUID.fromString(seatIdStr);
-            SeatHold hold = seatHoldService.holdSeat(seatId, userId);
-            Map<String, Object> holdData = new HashMap<>();
-            holdData.put("seatId", hold.getSeatId());
-            holdData.put("holdToken", hold.getHoldToken());
-            holdData.put("heldAt", hold.getHeldAt());
-            holdData.put("expiresAt", hold.getExpiresAt());
-            holds.add(holdData);
+        List<SeatHold> successfulHolds = new ArrayList<>();
+        try {
+            for (String seatIdStr : seatIds) {
+                UUID seatId = UUID.fromString(seatIdStr);
+                SeatHold hold = seatHoldService.holdSeat(seatId, userId);
+                successfulHolds.add(hold);
+                Map<String, Object> holdData = new HashMap<>();
+                holdData.put("seatId", hold.getSeatId());
+                holdData.put("holdToken", hold.getHoldToken());
+                holdData.put("heldAt", hold.getHeldAt());
+                holdData.put("expiresAt", hold.getExpiresAt());
+                holds.add(holdData);
+            }
+        } catch (Exception ex) {
+            // Rollback previously successful holds on failure
+            for (SeatHold h : successfulHolds) {
+                try {
+                    seatHoldService.releaseSeatHold(h.getSeatId(), h.getHoldToken());
+                } catch (Exception releaseEx) {
+                    log.warn("Failed to rollback hold for seat {}: {}", h.getSeatId(), releaseEx.getMessage());
+                }
+            }
+            throw ex;
         }
 
         return ResponseEntity.ok(ApiResponse.success("Seats held successfully", holds));
