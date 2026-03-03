@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="festBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f97316;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="250" fill="url(#festBg)" rx="12"/>
+  <!-- Bunting / flags -->
+  <line x1="30" y1="20" x2="370" y2="20" stroke="white" stroke-width="2" opacity="0.4"/>
+  <polygon points="50,20 65,45 80,20" fill="#ef4444" opacity="0.7"/>
+  <polygon points="100,20 115,45 130,20" fill="#3b82f6" opacity="0.7"/>
+  <polygon points="150,20 165,45 180,20" fill="#22c55e" opacity="0.7"/>
+  <polygon points="200,20 215,45 230,20" fill="#a855f7" opacity="0.7"/>
+  <polygon points="250,20 265,45 280,20" fill="#ec4899" opacity="0.7"/>
+  <polygon points="300,20 315,45 330,20" fill="#06b6d4" opacity="0.7"/>
+  <!-- Ferris wheel -->
+  <g transform="translate(280, 90)">
+    <circle cx="50" cy="50" r="45" fill="none" stroke="white" stroke-width="2" opacity="0.4"/>
+    <circle cx="50" cy="50" r="5" fill="white" opacity="0.5"/>
+    <line x1="50" y1="5" x2="50" y2="95" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <line x1="5" y1="50" x2="95" y2="50" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <line x1="18" y1="18" x2="82" y2="82" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <line x1="82" y1="18" x2="18" y2="82" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <!-- Gondolas -->
+    <circle cx="50" cy="5" r="6" fill="white" opacity="0.5"/>
+    <circle cx="50" cy="95" r="6" fill="white" opacity="0.5"/>
+    <circle cx="5" cy="50" r="6" fill="white" opacity="0.5"/>
+    <circle cx="95" cy="50" r="6" fill="white" opacity="0.5"/>
+    <!-- Support -->
+    <line x1="50" y1="95" x2="30" y2="140" stroke="white" stroke-width="2" opacity="0.3"/>
+    <line x1="50" y1="95" x2="70" y2="140" stroke="white" stroke-width="2" opacity="0.3"/>
+  </g>
+  <!-- Confetti / Fireworks -->
+  <circle cx="60" cy="70" r="4" fill="#ef4444" opacity="0.8"/>
+  <circle cx="80" cy="85" r="3" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="120" cy="65" r="3.5" fill="#a855f7" opacity="0.8"/>
+  <circle cx="140" cy="90" r="2.5" fill="#22c55e" opacity="0.7"/>
+  <circle cx="170" cy="75" r="3" fill="#ec4899" opacity="0.8"/>
+  <circle cx="200" cy="60" r="4" fill="#fbbf24" opacity="0.7"/>
+  <!-- Tent -->
+  <g transform="translate(50, 110)">
+    <polygon points="70,0 0,100 140,100" fill="white" opacity="0.2"/>
+    <polygon points="70,0 35,100 70,100" fill="#ef4444" opacity="0.3"/>
+    <polygon points="70,0 70,100 105,100" fill="white" opacity="0.25"/>
+    <line x1="70" y1="0" x2="70" y2="100" stroke="white" stroke-width="2" opacity="0.3"/>
+  </g>
+  <!-- Crowd -->
+  <path d="M0 225 Q40 210 80 220 Q120 200 160 215 Q200 205 240 218 Q280 200 320 215 Q360 210 400 222 L400 250 L0 250 Z" fill="white" opacity="0.15"/>
+</svg>

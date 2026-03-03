@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="theatreBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e11d48;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="250" fill="url(#theatreBg)" rx="12"/>
+  <!-- Curtain left -->
+  <path d="M0 0 Q30 40 20 80 Q40 120 15 160 Q35 200 10 250 L0 250 Z" fill="#be123c" opacity="0.6"/>
+  <path d="M30 0 Q60 40 50 80 Q70 120 45 160 Q65 200 40 250 L30 250 Z" fill="#be123c" opacity="0.4"/>
+  <!-- Curtain right -->
+  <path d="M400 0 Q370 40 380 80 Q360 120 385 160 Q365 200 390 250 L400 250 Z" fill="#be123c" opacity="0.6"/>
+  <path d="M370 0 Q340 40 350 80 Q330 120 355 160 Q335 200 360 250 L370 250 Z" fill="#be123c" opacity="0.4"/>
+  <!-- Stage -->
+  <rect x="60" y="200" width="280" height="40" rx="4" fill="white" opacity="0.15"/>
+  <!-- Spotlight -->
+  <ellipse cx="200" cy="50" rx="40" ry="15" fill="white" opacity="0.2"/>
+  <polygon points="170,55 140,200 260,200 230,55" fill="white" opacity="0.08"/>
+  <!-- Comedy mask (left) -->
+  <g transform="translate(130, 80)">
+    <ellipse cx="30" cy="30" rx="28" ry="32" fill="white" opacity="0.9"/>
+    <ellipse cx="20" cy="25" rx="5" ry="6" fill="#e11d48"/>
+    <ellipse cx="40" cy="25" rx="5" ry="6" fill="#e11d48"/>
+    <path d="M15 38 Q30 52 45 38" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- Tragedy mask (right) -->
+  <g transform="translate(220, 80)">
+    <ellipse cx="30" cy="30" rx="28" ry="32" fill="white" opacity="0.9"/>
+    <ellipse cx="20" cy="25" rx="5" ry="6" fill="#e11d48"/>
+    <ellipse cx="40" cy="25" rx="5" ry="6" fill="#e11d48"/>
+    <path d="M15 45 Q30 32 45 45" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- Stars -->
+  <circle cx="100" cy="30" r="2" fill="white" opacity="0.6"/>
+  <circle cx="300" cy="45" r="2" fill="white" opacity="0.6"/>
+  <circle cx="200" cy="15" r="2.5" fill="white" opacity="0.5"/>
+  <circle cx="150" cy="170" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="250" cy="165" r="1.5" fill="white" opacity="0.4"/>
+</svg>

@@ -199,6 +199,148 @@ public class DataInitializer implements CommandLineRunner {
                 LocalDateTime.of(2026, 4, 26, 0, 0),
                 90, new BigDecimal("200"));
 
+        // ── Sports Events ──
+        Route iplFinal = createRoute("IPL 2026 Final", "Mumbai", "SPORTS",
+                "The grand final of the Indian Premier League 2026");
+        Route premierLeague = createRoute("Manchester United vs Liverpool", "Manchester", "SPORTS",
+                "English Premier League — the ultimate rivalry match");
+        Route nbaFinals = createRoute("NBA Finals Game 7", "Los Angeles", "SPORTS",
+                "NBA Finals 2026 — decisive Game 7");
+        Route wimbledon = createRoute("Wimbledon Men's Final", "London", "SPORTS",
+                "The Championships, Wimbledon — Men's Singles Final");
+        Route cricketWC = createRoute("ICC Cricket World Cup Semi-Final", "Delhi", "SPORTS",
+                "India vs Australia — World Cup Semi-Final");
+
+        createScheduleWithSeats(iplFinal, "Wankhede Stadium",
+                LocalDateTime.of(2026, 5, 24, 19, 30),
+                LocalDateTime.of(2026, 5, 24, 23, 30),
+                80, new BigDecimal("3500"));
+
+        createScheduleWithSeats(premierLeague, "Old Trafford",
+                LocalDateTime.of(2026, 4, 12, 16, 0),
+                LocalDateTime.of(2026, 4, 12, 18, 0),
+                70, new BigDecimal("120"));
+
+        createScheduleWithSeats(nbaFinals, "Crypto.com Arena",
+                LocalDateTime.of(2026, 6, 21, 20, 0),
+                LocalDateTime.of(2026, 6, 21, 23, 0),
+                100, new BigDecimal("500"));
+
+        createScheduleWithSeats(wimbledon, "Centre Court",
+                LocalDateTime.of(2026, 7, 12, 14, 0),
+                LocalDateTime.of(2026, 7, 12, 18, 0),
+                60, new BigDecimal("200"));
+
+        createScheduleWithSeats(cricketWC, "Arun Jaitley Stadium",
+                LocalDateTime.of(2026, 10, 18, 14, 0),
+                LocalDateTime.of(2026, 10, 18, 22, 0),
+                90, new BigDecimal("2500"));
+
+        // ── Theatre Events ──
+        Route hamilton = createRoute("Hamilton", "New York", "THEATRE",
+                "The musical that revolutionized Broadway — Hamilton");
+        Route phantomOpera = createRoute("The Phantom of the Opera", "London", "THEATRE",
+                "Andrew Lloyd Webber's legendary musical");
+        Route lionKing = createRoute("The Lion King", "New York", "THEATRE",
+                "Disney's award-winning stage adaptation");
+        Route wicked = createRoute("Wicked", "Chicago", "THEATRE",
+                "The untold story of the witches of Oz");
+
+        createScheduleWithSeats(hamilton, "Richard Rodgers Theatre",
+                LocalDateTime.of(2026, 3, 20, 19, 0),
+                LocalDateTime.of(2026, 3, 20, 22, 0),
+                50, new BigDecimal("180"));
+
+        createScheduleWithSeats(hamilton, "Richard Rodgers Theatre",
+                LocalDateTime.of(2026, 3, 21, 14, 0),
+                LocalDateTime.of(2026, 3, 21, 17, 0),
+                50, new BigDecimal("200"));
+
+        createScheduleWithSeats(phantomOpera, "Her Majesty's Theatre",
+                LocalDateTime.of(2026, 4, 5, 19, 30),
+                LocalDateTime.of(2026, 4, 5, 22, 0),
+                45, new BigDecimal("95"));
+
+        createScheduleWithSeats(lionKing, "Minskoff Theatre",
+                LocalDateTime.of(2026, 3, 28, 19, 0),
+                LocalDateTime.of(2026, 3, 28, 22, 0),
+                55, new BigDecimal("160"));
+
+        createScheduleWithSeats(wicked, "James M. Nederlander Theatre",
+                LocalDateTime.of(2026, 4, 10, 19, 30),
+                LocalDateTime.of(2026, 4, 10, 22, 0),
+                48, new BigDecimal("140"));
+
+        // ── Festivals ──
+        Route coachella = createRoute("Coachella 2026", "Indio", "FESTIVAL",
+                "The legendary Coachella Valley Music and Arts Festival");
+        Route holi = createRoute("Holi Festival of Colors", "Delhi", "FESTIVAL",
+                "Grand celebration of Holi with colors, music and dance");
+        Route tomorrowland = createRoute("Tomorrowland 2026", "Boom", "FESTIVAL",
+                "The world's most iconic electronic music festival");
+        Route sunburn = createRoute("Sunburn Festival 2026", "Goa", "FESTIVAL",
+                "Asia's largest electronic dance music festival");
+
+        createScheduleWithSeats(coachella, "Empire Polo Club",
+                LocalDateTime.of(2026, 4, 10, 12, 0),
+                LocalDateTime.of(2026, 4, 10, 23, 59),
+                120, new BigDecimal("450"));
+
+        createScheduleWithSeats(coachella, "Empire Polo Club",
+                LocalDateTime.of(2026, 4, 11, 12, 0),
+                LocalDateTime.of(2026, 4, 11, 23, 59),
+                120, new BigDecimal("450"));
+
+        createScheduleWithSeats(holi, "India Gate Grounds",
+                LocalDateTime.of(2026, 3, 14, 10, 0),
+                LocalDateTime.of(2026, 3, 14, 18, 0),
+                200, new BigDecimal("500"));
+
+        createScheduleWithSeats(tomorrowland, "De Schorre",
+                LocalDateTime.of(2026, 7, 17, 12, 0),
+                LocalDateTime.of(2026, 7, 17, 23, 59),
+                150, new BigDecimal("350"));
+
+        createScheduleWithSeats(sunburn, "Vagator Beach",
+                LocalDateTime.of(2026, 12, 28, 14, 0),
+                LocalDateTime.of(2026, 12, 28, 23, 59),
+                100, new BigDecimal("3000"));
+
+        // ── Shows ──
+        Route cirqueSoleil = createRoute("Cirque du Soleil — Kooza", "Las Vegas", "SHOW",
+                "Breathtaking acrobatics and dazzling performances");
+        Route blueMan = createRoute("Blue Man Group", "New York", "SHOW",
+                "The ultimate multimedia sensory experience");
+        Route standupKevin = createRoute("Kevin Hart — Reality Check Tour", "Los Angeles", "SHOW",
+                "Kevin Hart's hilarious stand-up comedy tour");
+        Route magicShow = createRoute("David Copperfield Live", "Las Vegas", "SHOW",
+                "World's greatest illusionist — live in Las Vegas");
+
+        createScheduleWithSeats(cirqueSoleil, "MGM Grand Theater",
+                LocalDateTime.of(2026, 4, 15, 19, 0),
+                LocalDateTime.of(2026, 4, 15, 21, 30),
+                60, new BigDecimal("130"));
+
+        createScheduleWithSeats(cirqueSoleil, "MGM Grand Theater",
+                LocalDateTime.of(2026, 4, 16, 19, 0),
+                LocalDateTime.of(2026, 4, 16, 21, 30),
+                60, new BigDecimal("130"));
+
+        createScheduleWithSeats(blueMan, "Astor Place Theatre",
+                LocalDateTime.of(2026, 3, 22, 20, 0),
+                LocalDateTime.of(2026, 3, 22, 22, 0),
+                40, new BigDecimal("85"));
+
+        createScheduleWithSeats(standupKevin, "The Forum",
+                LocalDateTime.of(2026, 5, 3, 20, 0),
+                LocalDateTime.of(2026, 5, 3, 22, 30),
+                80, new BigDecimal("110"));
+
+        createScheduleWithSeats(magicShow, "David Copperfield Theater",
+                LocalDateTime.of(2026, 4, 20, 19, 0),
+                LocalDateTime.of(2026, 4, 20, 21, 0),
+                50, new BigDecimal("150"));
+
         log.info("Seed data created successfully: {} routes, {} schedules",
                 routeRepository.count(), scheduleRepository.count());
     }

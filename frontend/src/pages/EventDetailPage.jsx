@@ -102,9 +102,10 @@ export default function EventDetailPage() {
   }
 
   const totalPrice = selectedSeats.reduce((sum, s) => sum + s.price, 0);
-  const isConcert = schedule.transportMode === 'CONCERT';
-  const displayTitle = isConcert ? schedule.originCity : `${schedule.originCity} → ${schedule.destinationCity}`;
-  const displaySubtitle = isConcert ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : `${schedule.vehicleNumber} • ${schedule.durationMinutes ? `${Math.floor(schedule.durationMinutes / 60)}h ${schedule.durationMinutes % 60}m` : ''}`;
+  const EVENT_TYPES = ['CONCERT', 'SPORTS', 'THEATRE', 'FESTIVAL', 'SHOW'];
+  const isEvent = EVENT_TYPES.includes(schedule.transportMode);
+  const displayTitle = isEvent ? schedule.originCity : `${schedule.originCity} → ${schedule.destinationCity}`;
+  const displaySubtitle = isEvent ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : `${schedule.vehicleNumber} • ${schedule.durationMinutes ? `${Math.floor(schedule.durationMinutes / 60)}h ${schedule.durationMinutes % 60}m` : ''}`;
 
   const handleProceedToCheckout = () => {
     navigate('/checkout', {
@@ -192,9 +193,9 @@ export default function EventDetailPage() {
                       <MapPin className="h-5 w-5 text-indigo-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{isConcert ? 'Venue' : 'Route'}</p>
+                      <p className="text-sm text-muted-foreground">{isEvent ? 'Venue' : 'Route'}</p>
                       <p className="font-medium">{displayTitle}</p>
-                      <p className="text-xs text-muted-foreground">{isConcert ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : schedule.vehicleNumber}</p>
+                      <p className="text-xs text-muted-foreground">{isEvent ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : schedule.vehicleNumber}</p>
                     </div>
                   </div>
                 </div>
@@ -227,7 +228,7 @@ export default function EventDetailPage() {
                   <CardContent className="p-6 prose dark:prose-invert max-w-none">
                     <h3>About this Event</h3>
                     <p className="text-muted-foreground">
-                      {isConcert
+                      {isEvent
                         ? `Live concert at ${schedule.vehicleNumber}, ${schedule.destinationCity}. Don't miss this amazing experience!`
                         : `Travel from ${schedule.originCity} to ${schedule.destinationCity} on vehicle ${schedule.vehicleNumber}.`}
                       {' '}Base fare starts at {formatCurrency(Number(schedule.baseFare || 0))} with dynamic pricing based on demand.
@@ -253,10 +254,10 @@ export default function EventDetailPage() {
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="font-semibold text-lg mb-4">{displayTitle}</h3>
-                    <p className="text-muted-foreground mb-4">{isConcert ? `Venue: ${schedule.vehicleNumber}` : `Vehicle: ${schedule.vehicleNumber}`}</p>
+                    <p className="text-muted-foreground mb-4">{isEvent ? `Venue: ${schedule.vehicleNumber}` : `Vehicle: ${schedule.vehicleNumber}`}</p>
                     <div className="h-48 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
                       <MapPin className="h-8 w-8 mr-2" />
-                      {isConcert ? 'Venue map placeholder' : 'Route map placeholder'}
+                      {isEvent ? 'Venue map placeholder' : 'Route map placeholder'}
                     </div>
                   </CardContent>
                 </Card>

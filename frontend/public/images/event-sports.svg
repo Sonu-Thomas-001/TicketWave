@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="sportsBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="field" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#16a34a;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#15803d;stop-opacity:0.6" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="250" fill="url(#sportsBg)" rx="12"/>
+  <!-- Stadium lights -->
+  <circle cx="80" cy="30" r="20" fill="white" opacity="0.15"/>
+  <circle cx="320" cy="30" r="20" fill="white" opacity="0.15"/>
+  <line x1="80" y1="50" x2="80" y2="90" stroke="white" stroke-width="3" opacity="0.2"/>
+  <line x1="320" y1="50" x2="320" y2="90" stroke="white" stroke-width="3" opacity="0.2"/>
+  <!-- Field -->
+  <rect x="50" y="100" width="300" height="120" rx="8" fill="url(#field)" stroke="white" stroke-width="2" opacity="0.5"/>
+  <!-- Field lines -->
+  <line x1="200" y1="100" x2="200" y2="220" stroke="white" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="200" cy="160" r="30" fill="none" stroke="white" stroke-width="1.5" opacity="0.4"/>
+  <!-- Goal posts -->
+  <rect x="55" y="135" width="5" height="50" rx="2" fill="white" opacity="0.5"/>
+  <rect x="340" y="135" width="5" height="50" rx="2" fill="white" opacity="0.5"/>
+  <!-- Trophy -->
+  <g transform="translate(175, 55)">
+    <path d="M20 0 L30 0 L28 20 L22 20 Z" fill="#fbbf24" opacity="0.9"/>
+    <path d="M15 0 L20 0 L20 10 C15 12 10 8 15 0Z" fill="#fbbf24" opacity="0.7"/>
+    <path d="M30 0 L35 0 C40 8 35 12 30 10 L30 0Z" fill="#fbbf24" opacity="0.7"/>
+    <rect x="22" y="20" width="6" height="8" fill="#fbbf24" opacity="0.8"/>
+    <rect x="18" y="28" width="14" height="4" rx="2" fill="#fbbf24" opacity="0.8"/>
+  </g>
+  <!-- Crowd silhouette -->
+  <path d="M0 230 Q50 215 100 225 Q150 210 200 220 Q250 208 300 222 Q350 212 400 228 L400 250 L0 250 Z" fill="white" opacity="0.1"/>
+</svg>

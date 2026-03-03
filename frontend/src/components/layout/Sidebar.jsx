@@ -1,8 +1,9 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, CalendarDays, Search, Ticket, LayoutDashboard,
-  Users, Settings, HelpCircle, X, Music, Trophy, Drama, PartyPopper, Sparkles,
+  Users, Settings, HelpCircle, X, Music, Trophy, Drama,
+  PartyPopper, Sparkles, TrendingUp, Clock, Star,
 } from 'lucide-react';
 import { Button, Separator } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
@@ -15,11 +16,17 @@ const mainNav = [
 ];
 
 const categoryNav = [
-  { path: '/events?cat=concert', label: 'Concerts', icon: Music },
-  { path: '/events?cat=sports', label: 'Sports', icon: Trophy },
-  { path: '/events?cat=theatre', label: 'Theatre', icon: Drama },
-  { path: '/events?cat=festival', label: 'Festivals', icon: PartyPopper },
-  { path: '/events?cat=show', label: 'Shows', icon: Sparkles },
+  { id: 'concert',  path: '/events?cat=concert',  label: 'Concerts',  icon: Music,       color: 'from-violet-500 to-purple-600',  bg: 'bg-violet-500/10',  text: 'text-violet-500' },
+  { id: 'sports',   path: '/events?cat=sports',    label: 'Sports',    icon: Trophy,      color: 'from-emerald-500 to-green-600',  bg: 'bg-emerald-500/10', text: 'text-emerald-500' },
+  { id: 'theatre',  path: '/events?cat=theatre',   label: 'Theatre',   icon: Drama,       color: 'from-rose-500 to-pink-600',      bg: 'bg-rose-500/10',    text: 'text-rose-500' },
+  { id: 'festival', path: '/events?cat=festival',  label: 'Festivals', icon: PartyPopper, color: 'from-amber-500 to-orange-600',   bg: 'bg-amber-500/10',   text: 'text-amber-500' },
+  { id: 'show',     path: '/events?cat=show',      label: 'Shows',     icon: Sparkles,    color: 'from-cyan-500 to-blue-600',      bg: 'bg-cyan-500/10',    text: 'text-cyan-500' },
+];
+
+const quickLinks = [
+  { path: '/events?sort=trending', label: 'Trending Now', icon: TrendingUp },
+  { path: '/events?sort=upcoming', label: 'Coming Soon', icon: Clock },
+  { path: '/events?sort=top',      label: 'Top Rated',    icon: Star },
 ];
 
 const adminNav = [
@@ -31,54 +38,102 @@ const adminNav = [
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
+  const activeCat = searchParams.get('cat');
 
   const content = (
-    <div className="flex flex-col h-full py-4">
-      {/* Close on mobile */}
-      <div className="flex items-center justify-between px-4 mb-4 lg:hidden">
-        <span className="text-lg font-bold text-gradient">Menu</span>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+    <div className="flex flex-col h-full">
+      {/* Mobile close header */}
+      <div className="flex items-center justify-between px-5 py-4 lg:hidden border-b">
+        <span className="text-lg font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+          TicketWave
+        </span>
+        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-destructive/10 hover:text-destructive">
           <X className="h-5 w-5" />
         </Button>
       </div>
 
-      {/* Main nav */}
-      <nav className="flex-1 space-y-1 px-3">
-        <p className="px-3 mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {/* ── Main Navigation ── */}
+        <p className="px-3 mb-2 text-[11px] font-semibold uppercase text-muted-foreground/70 tracking-widest">
           Navigation
         </p>
         {mainNav.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname === item.path;
+          const active = location.pathname === item.path && !activeCat;
           return (
             <Link key={item.path} to={item.path} onClick={onClose}>
-              <div className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                active
-                  ? 'gradient-primary text-white shadow-md shadow-indigo-500/20'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              )}>
-                <Icon className="h-4 w-4" />
-                {item.label}
+              <div
+                className={cn(
+                  'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                  active
+                    ? 'gradient-primary text-white shadow-lg shadow-indigo-500/25'
+                    : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
+                )}
+              >
+                <Icon className={cn('h-[18px] w-[18px] transition-transform duration-200', !active && 'group-hover:scale-110')} />
+                <span>{item.label}</span>
               </div>
             </Link>
           );
         })}
 
-        <Separator className="my-4" />
+        <div className="py-3"><Separator /></div>
 
-        <p className="px-3 mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+        {/* ── Categories with colored icons ── */}
+        <p className="px-3 mb-3 text-[11px] font-semibold uppercase text-muted-foreground/70 tracking-widest">
           Categories
         </p>
-        {categoryNav.map((item) => {
+        <div className="space-y-1">
+          {categoryNav.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === '/events' && activeCat === item.id;
+            return (
+              <Link key={item.id} to={item.path} onClick={onClose}>
+                <div
+                  className={cn(
+                    'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
+                      : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-200',
+                      isActive ? 'bg-white/20' : `${item.bg} group-hover:scale-110`
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', isActive ? 'text-white' : item.text)} />
+                  </div>
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="catIndicator"
+                      className="ml-auto h-2 w-2 rounded-full bg-white"
+                    />
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="py-3"><Separator /></div>
+
+        {/* ── Discover / Quick Links ── */}
+        <p className="px-3 mb-2 text-[11px] font-semibold uppercase text-muted-foreground/70 tracking-widest">
+          Discover
+        </p>
+        {quickLinks.map((item) => {
           const Icon = item.icon;
           return (
             <Link key={item.path} to={item.path} onClick={onClose}>
-              <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200">
-                <Icon className="h-4 w-4" />
-                {item.label}
+              <div className="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-accent/80 hover:text-foreground transition-all duration-200">
+                <Icon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                <span>{item.label}</span>
               </div>
             </Link>
           );
@@ -86,8 +141,8 @@ export default function Sidebar({ open, onClose }) {
 
         {isAdmin && (
           <>
-            <Separator className="my-4" />
-            <p className="px-3 mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+            <div className="py-3"><Separator /></div>
+            <p className="px-3 mb-2 text-[11px] font-semibold uppercase text-muted-foreground/70 tracking-widest">
               Admin
             </p>
             {adminNav.map((item) => {
@@ -95,13 +150,15 @@ export default function Sidebar({ open, onClose }) {
               const active = location.pathname === item.path;
               return (
                 <Link key={item.path} to={item.path} onClick={onClose}>
-                  <div className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                    active
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  )}>
-                    <Icon className="h-4 w-4" />
+                  <div
+                    className={cn(
+                      'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                      active
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     {item.label}
                   </div>
                 </Link>
@@ -109,16 +166,17 @@ export default function Sidebar({ open, onClose }) {
             })}
           </>
         )}
-      </nav>
+      </div>
 
       {/* Footer */}
-      <div className="px-3 mt-4">
+      <div className="px-3 py-3 border-t">
         <Link to="/help" onClick={onClose}>
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-accent/80 hover:text-foreground transition-all duration-200">
             <HelpCircle className="h-4 w-4" />
             Help & Support
           </div>
         </Link>
+        <p className="px-3 pt-2 text-[10px] text-muted-foreground/50 text-center">&copy; 2026 TicketWave</p>
       </div>
     </div>
   );
@@ -126,7 +184,7 @@ export default function Sidebar({ open, onClose }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:top-16 lg:border-r bg-card/50 backdrop-blur-sm z-30">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:top-16 lg:border-r bg-card/60 backdrop-blur-md z-30">
         {content}
       </aside>
 
@@ -138,14 +196,14 @@ export default function Sidebar({ open, onClose }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
               onClick={onClose}
             />
             <motion.aside
-              initial={{ x: -280 }}
+              initial={{ x: -300 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              exit={{ x: -300 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
               className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r shadow-2xl lg:hidden"
             >
               {content}

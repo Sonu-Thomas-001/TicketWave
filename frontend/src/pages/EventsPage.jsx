@@ -8,28 +8,41 @@ import { api } from '@/lib/api';
 import { staggerContainer, fadeInUp } from '@/lib/animations';
 
 /** Map a schedule API object into the shape EventCard expects. */
+const EVENT_TYPES = new Set(['CONCERT', 'SPORTS', 'THEATRE', 'FESTIVAL', 'SHOW']);
+
 function mapScheduleToEvent(s) {
   const mode = (s.transportMode || 'BUS').toUpperCase();
-  const isConcert = mode === 'CONCERT';
+  const isEvent = EVENT_TYPES.has(mode);
+  const tagMap = {
+    CONCERT:  ['Concert', 'Live', 'Music'],
+    SPORTS:   ['Sports', 'Live', 'Match'],
+    THEATRE:  ['Theatre', 'Stage', 'Drama'],
+    FESTIVAL: ['Festival', 'Outdoor', 'Multi-Day'],
+    SHOW:     ['Show', 'Live', 'Entertainment'],
+  };
   return {
     id: s.scheduleId,
-    title: isConcert ? s.originCity : `${s.originCity} → ${s.destinationCity}`,
+    title: isEvent ? s.originCity : `${s.originCity} \u2192 ${s.destinationCity}`,
     venue: s.vehicleNumber,
-    city: isConcert ? s.destinationCity : s.originCity,
+    city: isEvent ? s.destinationCity : s.originCity,
     date: s.departureTime,
     imageUrl: `/images/event-${mode.toLowerCase()}.svg`,
     price: { min: Number(s.dynamicPrice || s.baseFare), max: Number(s.dynamicPrice || s.baseFare) * 1.5 },
     totalSeats: s.totalSeats,
     availableSeats: s.availableSeats,
-    tags: isConcert ? ['Concert', 'Live', 'Music'] : [s.transportMode || 'BUS'],
+    tags: tagMap[mode] || [s.transportMode || 'BUS'],
     category: mode.toLowerCase(),
-    featured: isConcert || (s.availabilityPercentage ?? 100) < 30,
+    featured: isEvent || (s.availabilityPercentage ?? 100) < 30,
   };
 }
 
 const browseCategories = [
   { id: 'all', label: 'All Events' },
   { id: 'concert', label: 'Concerts' },
+  { id: 'sports', label: 'Sports' },
+  { id: 'theatre', label: 'Theatre' },
+  { id: 'festival', label: 'Festivals' },
+  { id: 'show', label: 'Shows' },
   { id: 'bus', label: 'Bus' },
   { id: 'train', label: 'Train' },
   { id: 'flight', label: 'Flight' },
