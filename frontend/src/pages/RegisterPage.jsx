@@ -8,8 +8,8 @@ import { fadeInUp } from '@/lib/animations';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const { register } = useAuth();
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.name || !form.email || !form.password) {
+    if (!form.firstName || !form.lastName || !form.email || !form.password) {
       setError('Please fill in all fields');
       return;
     }
@@ -27,16 +27,21 @@ export default function RegisterPage() {
       setError('Passwords do not match');
       return;
     }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
     setIsLoading(true);
     try {
-      await login(form.email, form.password);
+      await register({
+        email: form.email,
+        password: form.password,
+        firstName: form.firstName,
+        lastName: form.lastName,
+      });
       navigate('/');
-    } catch {
-      setError('Registration failed. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -56,16 +61,30 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Full Name</label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Alex Johnson"
-              value={form.name}
-              onChange={(e) => update('name', e.target.value)}
-              className="pl-9"
-            />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">First Name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="John"
+                value={form.firstName}
+                onChange={(e) => update('firstName', e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Last Name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Doe"
+                value={form.lastName}
+                onChange={(e) => update('lastName', e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </div>
         </div>
 

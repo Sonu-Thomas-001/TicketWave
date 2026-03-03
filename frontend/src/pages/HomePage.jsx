@@ -1,17 +1,35 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import {
   Search, ArrowRight, Sparkles, TrendingUp, Calendar,
   Music, Trophy, Drama, PartyPopper, Star, ChevronRight,
   ChevronLeft, Shield, Zap, Globe, Headphones, Clock,
-  MapPin, Plane, Train, Bus,
+  MapPin, Plane, Train, Bus, Loader2,
 } from 'lucide-react';
 import { Button, Input, Badge, Card, CardContent } from '@/components/ui';
 import { EventCard } from '@/components/shared';
 import SearchCard from '@/components/features/SearchCard';
-import { mockEvents } from '@/lib/mockData';
+import { api } from '@/lib/api';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+
+/** Map a schedule API object into the shape EventCard expects. */
+function mapScheduleToEvent(s) {
+  return {
+    id: s.scheduleId,
+    title: `${s.originCity} → ${s.destinationCity}`,
+    venue: s.vehicleNumber,
+    city: s.originCity,
+    date: s.departureTime,
+    imageUrl: `/images/event-${(s.transportMode || 'BUS').toLowerCase()}.svg`,
+    price: { min: Number(s.dynamicPrice || s.baseFare), max: Number(s.dynamicPrice || s.baseFare) * 1.5 },
+    totalSeats: s.totalSeats,
+    availableSeats: s.availableSeats,
+    tags: [s.transportMode || 'BUS'],
+    category: (s.transportMode || 'BUS').toLowerCase(),
+    featured: (s.availabilityPercentage ?? 100) < 30,
+  };
+}
 
 const categories = [
   { id: 'concert', label: 'Concerts', icon: Music, color: 'from-violet-500 to-purple-500' },
@@ -58,8 +76,26 @@ export default function HomePage() {
   const featuresRef = useRef(null);
   const featuresInView = useInView(featuresRef, { once: true, margin: '-100px' });
 
-  const featuredEvents = useMemo(() => mockEvents.filter((e) => e.featured), []);
-  const trendingEvents = useMemo(() => [...mockEvents].sort((a, b) => a.availableSeats - b.availableSeats).slice(0, 4), []);
+  const [allEvents, setAllEvents] = useState([]);
+  const [loadingSchedules, setLoadingSchedules] = useState(true);
+
+  // Fetch schedules from real API
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/schedules/browse')
+      .then((res) => {
+        if (!cancelled) {
+          const data = res.data ?? res;
+          setAllEvents(Array.isArray(data) ? data.map(mapScheduleToEvent) : []);
+        }
+      })
+      .catch(() => { /* homepage degrades gracefully */ })
+      .finally(() => { if (!cancelled) setLoadingSchedules(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const featuredEvents = useMemo(() => allEvents.filter((e) => e.featured).slice(0, 3), [allEvents]);
+  const trendingEvents = useMemo(() => [...allEvents].sort((a, b) => a.availableSeats - b.availableSeats).slice(0, 4), [allEvents]);
 
   const visibleRoutes = 3;
   const maxCarouselIndex = Math.max(0, popularRoutes.length - visibleRoutes);
@@ -340,9 +376,16 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {featuredEvents.map((event, i) => (
+          {featuredEvents.length > 0 ? featuredEvents.map((event, i) => (
             <EventCard key={event.id} event={event} index={i} />
-          ))}
+          )) : loadingSchedules ? (
+            <div className="col-span-full flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">Loading...</span>
+            </div>
+          ) : (
+            <p className="col-span-full text-center text-muted-foreground py-8">No featured schedules available</p>
+          )}
         </motion.div>
       </section>
 
@@ -405,9 +448,16 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {trendingEvents.map((event, i) => (
+          {trendingEvents.length > 0 ? trendingEvents.map((event, i) => (
             <EventCard key={event.id} event={event} index={i} />
-          ))}
+          )) : loadingSchedules ? (
+            <div className="col-span-full flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">Loading...</span>
+            </div>
+          ) : (
+            <p className="col-span-full text-center text-muted-foreground py-8">No trending schedules right now</p>
+          )}
         </motion.div>
       </section>
 

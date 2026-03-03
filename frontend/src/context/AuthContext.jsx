@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
+import { api } from '@/lib/api';
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,8 @@ function authReducer(state, action) {
         isAuthenticated: true,
         isLoading: false,
       };
+    case 'AUTH_ERROR':
+      return { ...initialState };
     case 'LOGOUT':
       return { ...initialState };
     case 'UPDATE_USER':
@@ -47,13 +50,50 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     dispatch({ type: 'LOGIN_START' });
-    // Simulated auth — replace with real API call
-    const mockUser = { id: '1', name: 'Alex Johnson', email, role: 'USER', avatar: '/images/avatar-default.svg' };
-    const mockToken = 'mock-jwt-token';
-    localStorage.setItem('tw-token', mockToken);
-    localStorage.setItem('tw-user', JSON.stringify(mockUser));
-    dispatch({ type: 'LOGIN_SUCCESS', payload: { user: mockUser, token: mockToken } });
-    return mockUser;
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const { token, firstName, lastName } = res.data;
+      const user = {
+        id: res.data.id || email,
+        name: `${firstName} ${lastName}`,
+        email: res.data.email,
+        firstName,
+        lastName,
+        role: res.data.role || 'USER',
+        avatar: '/images/avatar-default.svg',
+      };
+      localStorage.setItem('tw-token', token);
+      localStorage.setItem('tw-user', JSON.stringify(user));
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      return user;
+    } catch (err) {
+      dispatch({ type: 'AUTH_ERROR' });
+      throw err;
+    }
+  }, []);
+
+  const register = useCallback(async ({ email, password, firstName, lastName, phoneNumber }) => {
+    dispatch({ type: 'LOGIN_START' });
+    try {
+      const res = await api.post('/auth/register', { email, password, firstName, lastName, phoneNumber });
+      const { token } = res.data;
+      const user = {
+        id: res.data.id || email,
+        name: `${res.data.firstName} ${res.data.lastName}`,
+        email: res.data.email,
+        firstName: res.data.firstName,
+        lastName: res.data.lastName,
+        role: 'USER',
+        avatar: '/images/avatar-default.svg',
+      };
+      localStorage.setItem('tw-token', token);
+      localStorage.setItem('tw-user', JSON.stringify(user));
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      return user;
+    } catch (err) {
+      dispatch({ type: 'AUTH_ERROR' });
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -63,7 +103,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, SlidersHorizontal, X, Clock, MapPin, ArrowRight,
-  ChevronDown, Star, Filter, Bus, Train, Plane, Users,
+  ChevronDown, Star, Filter, Bus, Train, Plane, Users, Loader2,
 } from 'lucide-react';
 import {
   Button, Input, Badge, Card, CardContent, Separator,
@@ -11,61 +11,98 @@ import {
 } from '@/components/ui';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import { formatCurrency, cn } from '@/lib/utils';
-
-/* --- Mock search results --- */
-const mockResults = [
-  { id: 'r1', operator: 'SpeedLine Express', type: 'bus', icon: Bus, from: 'New York', to: 'Los Angeles', departure: '06:00 AM', arrival: '02:30 PM', duration: '8h 30m', price: 89, rating: 4.5, seats: 12, amenities: ['WiFi', 'AC', 'USB'], classType: 'Premium' },
-  { id: 'r2', operator: 'RailConnect', type: 'train', icon: Train, from: 'New York', to: 'Los Angeles', departure: '08:00 AM', arrival: '06:00 PM', duration: '10h 00m', price: 120, rating: 4.8, seats: 35, amenities: ['WiFi', 'Food', 'Power'], classType: 'Standard' },
-  { id: 'r3', operator: 'SkyJet Airlines', type: 'flight', icon: Plane, from: 'New York', to: 'Los Angeles', departure: '10:30 AM', arrival: '01:45 PM', duration: '3h 15m', price: 250, rating: 4.3, seats: 8, amenities: ['Meal', 'Entertainment'], classType: 'Economy' },
-  { id: 'r4', operator: 'BudgetBus Co.', type: 'bus', icon: Bus, from: 'New York', to: 'Los Angeles', departure: '11:00 PM', arrival: '07:30 AM', duration: '8h 30m', price: 45, rating: 3.9, seats: 22, amenities: ['AC', 'Recliner'], classType: 'Economy' },
-  { id: 'r5', operator: 'Premium Rails', type: 'train', icon: Train, from: 'New York', to: 'Los Angeles', departure: '02:00 PM', arrival: '11:00 PM', duration: '9h 00m', price: 180, rating: 4.7, seats: 5, amenities: ['WiFi', 'Food', 'Sleeper'], classType: 'Business' },
-  { id: 'r6', operator: 'EcoFly', type: 'flight', icon: Plane, from: 'New York', to: 'Los Angeles', departure: '04:00 PM', arrival: '07:00 PM', duration: '3h 00m', price: 195, rating: 4.1, seats: 18, amenities: ['WiFi', 'Snacks'], classType: 'Economy' },
-  { id: 'r7', operator: 'NightRider', type: 'bus', icon: Bus, from: 'New York', to: 'Los Angeles', departure: '09:00 PM', arrival: '06:00 AM', duration: '9h 00m', price: 55, rating: 4.0, seats: 30, amenities: ['AC', 'Blanket', 'USB'], classType: 'Standard' },
-  { id: 'r8', operator: 'LuxAir', type: 'flight', icon: Plane, from: 'New York', to: 'Los Angeles', departure: '07:00 AM', arrival: '10:30 AM', duration: '3h 30m', price: 450, rating: 4.9, seats: 3, amenities: ['Lounge', 'Meal', 'WiFi', 'Priority'], classType: 'First Class' },
-];
+import { api } from '@/lib/api';
 
 export default function SearchResultsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState('price');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
-    priceRange: [0, 500],
+    priceRange: [0, 5000],
     classTypes: [],
     timeSlots: [],
     operators: [],
   });
 
-  const from = searchParams.get('from') || 'New York';
-  const to = searchParams.get('to') || 'Los Angeles';
-  const date = searchParams.get('date') || 'Today';
+  const from = searchParams.get('from') || '';
+  const to = searchParams.get('to') || '';
+  const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+
+  // Fetch schedules from backend
+  useEffect(() => {
+    if (!from || !to) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    api.post('/schedules/search', {
+      originCity: from,
+      destinationCity: to,
+      travelDate: date,
+      sortBy: 'price',
+      sortOrder: 'asc',
+    })
+      .then((res) => {
+        const schedules = (res.data || []).map((s) => ({
+          id: s.scheduleId,
+          operator: s.vehicleNumber || 'TicketWave',
+          type: 'bus',
+          icon: Bus,
+          from: s.originCity,
+          to: s.destinationCity,
+          departure: s.departureTime ? new Date(s.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          arrival: s.arrivalTime ? new Date(s.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          duration: s.durationMinutes ? `${Math.floor(s.durationMinutes / 60)}h ${s.durationMinutes % 60}m` : '',
+          durationMinutes: s.durationMinutes || 0,
+          price: Number(s.dynamicPrice || s.baseFare || 0),
+          baseFare: Number(s.baseFare || 0),
+          rating: 4.5,
+          seats: s.availableSeats || 0,
+          totalSeats: s.totalSeats || 0,
+          amenities: ['AC'],
+          classType: 'Standard',
+          scheduleId: s.scheduleId,
+          demandFactor: s.demandFactor,
+        }));
+        setResults(schedules);
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to search schedules');
+      })
+      .finally(() => setLoading(false));
+  }, [from, to, date]);
 
   const filteredResults = useMemo(() => {
-    let results = [...mockResults];
+    let items = [...results];
 
     // Price filter
-    results = results.filter(
+    items = items.filter(
       (r) => r.price >= filters.priceRange[0] && r.price <= filters.priceRange[1]
     );
 
     // Class filter
     if (filters.classTypes.length > 0) {
-      results = results.filter((r) => filters.classTypes.includes(r.classType));
+      items = items.filter((r) => filters.classTypes.includes(r.classType));
     }
 
     // Operator filter
     if (filters.operators.length > 0) {
-      results = results.filter((r) => filters.operators.includes(r.operator));
+      items = items.filter((r) => filters.operators.includes(r.operator));
     }
 
     // Sort
-    if (sortBy === 'price') results.sort((a, b) => a.price - b.price);
-    else if (sortBy === 'duration') results.sort((a, b) => a.duration.localeCompare(b.duration));
-    else if (sortBy === 'departure') results.sort((a, b) => a.departure.localeCompare(b.departure));
-    else if (sortBy === 'rating') results.sort((a, b) => b.rating - a.rating);
+    if (sortBy === 'price') items.sort((a, b) => a.price - b.price);
+    else if (sortBy === 'duration') items.sort((a, b) => a.durationMinutes - b.durationMinutes);
+    else if (sortBy === 'departure') items.sort((a, b) => a.departure.localeCompare(b.departure));
+    else if (sortBy === 'rating') items.sort((a, b) => b.rating - a.rating);
 
-    return results;
-  }, [sortBy, filters]);
+    return items;
+  }, [sortBy, filters, results]);
 
   const toggleFilter = (key, value) => {
     setFilters((prev) => {
@@ -77,8 +114,8 @@ export default function SearchResultsPage() {
     });
   };
 
-  const uniqueClasses = [...new Set(mockResults.map((r) => r.classType))];
-  const uniqueOperators = [...new Set(mockResults.map((r) => r.operator))];
+  const uniqueClasses = [...new Set(results.map((r) => r.classType))];
+  const uniqueOperators = [...new Set(results.map((r) => r.operator))];
 
   const FilterPanel = ({ className }) => (
     <div className={cn('space-y-6', className)}>
@@ -89,7 +126,7 @@ export default function SearchResultsPage() {
           <input
             type="range"
             min="0"
-            max="500"
+            max="5000"
             value={filters.priceRange[1]}
             onChange={(e) => setFilters((prev) => ({ ...prev, priceRange: [prev.priceRange[0], parseInt(e.target.value)] }))}
             className="w-full"
@@ -182,12 +219,32 @@ export default function SearchResultsPage() {
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => setFilters({ priceRange: [0, 500], classTypes: [], timeSlots: [], operators: [] })}
+        onClick={() => setFilters({ priceRange: [0, 5000], classTypes: [], timeSlots: [], operators: [] })}
       >
         Clear All Filters
       </Button>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Searching schedules...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 text-center">
+        <Search className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold mb-2">Search Error</h3>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
@@ -335,7 +392,7 @@ export default function SearchResultsPage() {
                             <p className="text-2xs text-muted-foreground">per person</p>
                           </div>
                           <Button
-                            onClick={() => navigate(`/events/1`)}
+                            onClick={() => navigate(`/events/${result.scheduleId}`)}
                             className="gap-2 md:w-full"
                           >
                             Select Seats
@@ -357,7 +414,7 @@ export default function SearchResultsPage() {
               <p className="text-muted-foreground mb-6">Try adjusting your filters</p>
               <Button
                 variant="outline"
-                onClick={() => setFilters({ priceRange: [0, 500], classTypes: [], timeSlots: [], operators: [] })}
+                onClick={() => setFilters({ priceRange: [0, 5000], classTypes: [], timeSlots: [], operators: [] })}
               >
                 Clear Filters
               </Button>

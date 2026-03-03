@@ -36,6 +36,26 @@ public class ScheduleSearchService {
     }
 
     /**
+     * Get all active schedules for browsing. Returns enriched results with dynamic pricing.
+     *
+     * @return list of all active schedules
+     */
+    public List<ScheduleSearchResult> getAllActiveSchedules() {
+        log.info("Fetching all active schedules for browse page");
+
+        List<Schedule> schedules = scheduleRepository.findByActiveTrue(
+                org.springframework.data.domain.Pageable.unpaged()).getContent();
+
+        return schedules.stream()
+                .map(scheduleMapper::scheduleToSearchResult)
+                .map(result -> pricingService.enrichWithPricing(result,
+                        scheduleRepository.findById(result.getScheduleId()).orElse(null),
+                        DEFAULT_PRICE_MODIFIER))
+                .filter(result -> result != null)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Search schedules by origin, destination, and date with caching.
      * Applies dynamic pricing and sorts results.
      *

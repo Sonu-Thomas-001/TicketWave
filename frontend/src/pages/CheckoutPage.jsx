@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { fadeInUp } from '@/lib/animations';
+import { api } from '@/lib/api';
 
 const checkoutSteps = [
   { label: 'Passenger Details', description: 'Who is traveling?' },
@@ -26,7 +27,9 @@ const savedPassengers = [
 export default function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { event, selectedSeats, totalPrice } = location.state || {};
+  const { event, schedule, selectedSeats, totalPrice, scheduleId } = location.state || {};
+  const scheduleData = schedule || event;
+  const effectiveScheduleId = scheduleId || scheduleData?.scheduleId;
   const [currentStep, setCurrentStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
@@ -44,7 +47,7 @@ export default function CheckoutPage() {
     cardName: '', cardNumber: '', expiry: '', cvc: '', email: '',
   });
 
-  if (!event || !selectedSeats?.length) {
+  if (!scheduleData || !selectedSeats?.length) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <Ticket className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
@@ -83,11 +86,82 @@ export default function CheckoutPage() {
 
   const handlePayment = async () => {
     setIsProcessing(true);
-    await new Promise((r) => setTimeout(r, 2500));
-    setIsProcessing(false);
-    navigate('/booking-confirmation', {
-      state: { event, selectedSeats, totalPrice: finalTotal, passengers },
-    });
+    try {
+      const token = localStorage.getItem('tw-token');
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      // Step 1: Hold the selected seats in Redis
+      const holdRes = await fetch(`/api/v1/schedules/${effectiveScheduleId}/hold`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ seatIds: selectedSeats.map((s) => s.id) }),
+      });
+      const holdData = await holdRes.json();
+      if (!holdData.success || !holdData.data) {
+        throw new Error(holdData.message || 'Failed to hold seats');
+      }
+
+      // Step 2: Create booking using the valid holds
+      const seatHolds = holdData.data.map((h) => ({
+        seatId: h.seatId,
+        userId: null,
+        holdToken: h.holdToken,
+        heldAt: h.heldAt,
+        expiresAt: h.expiresAt,
+      }));
+
+      const idempotencyKey = crypto.randomUUID();
+      const res = await fetch('/api/v1/bookings', {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'X-Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          scheduleId: effectiveScheduleId,
+          seatHolds,
+          passengerBookings: {},
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        // Simulate payment confirmation via webhook
+        const intentId = data.data.paymentIntent?.intentId;
+        if (intentId) {
+          await api.post('/webhooks/payment/confirmed', {
+            eventId: crypto.randomUUID(),
+            eventType: 'payment.confirmed',
+            intentId,
+            transactionId: 'txn_' + crypto.randomUUID().slice(0, 8),
+            amount: finalTotal,
+            paymentMethod: 'card',
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        navigate('/booking-confirmation', {
+          state: {
+            schedule: scheduleData,
+            selectedSeats,
+            totalPrice: finalTotal,
+            passengers,
+            bookingId: data.data.bookingId,
+            pnr: data.data.pnr,
+            bookingStatus: data.data.bookingStatus,
+          },
+        });
+      } else {
+        alert('Booking failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Booking error: ' + err.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const canProceedFromStep0 = passengers.every((p) => p.name && p.email);
@@ -198,17 +272,19 @@ export default function CheckoutPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex gap-4">
-                      <img src={event.imageUrl} alt={event.title} className="w-24 h-24 rounded-xl object-cover" loading="lazy" />
+                      <div className="w-24 h-24 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                      </div>
                       <div>
-                        <h3 className="font-semibold">{event.title}</h3>
+                        <h3 className="font-semibold">{scheduleData.originCity} → {scheduleData.destinationCity}</h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <Calendar className="h-3.5 w-3.5" /> {formatDate(event.date)}
+                          <Calendar className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : 'N/A'}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> {formatTime(event.date)}
+                          <Clock className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5" /> {event.venue}, {event.city}
+                          <MapPin className="h-3.5 w-3.5" /> {scheduleData.vehicleNumber}
                         </div>
                       </div>
                     </div>
@@ -368,10 +444,12 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-3">
-                  <img src={event.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover" loading="lazy" />
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+                    {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                  </div>
                   <div>
-                    <p className="font-medium text-sm line-clamp-2">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(event.date)}</p>
+                    <p className="font-medium text-sm line-clamp-2">{scheduleData.originCity} → {scheduleData.destinationCity}</p>
+                    <p className="text-xs text-muted-foreground">{scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : ''}</p>
                   </div>
                 </div>
 

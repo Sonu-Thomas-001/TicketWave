@@ -11,6 +11,7 @@ public interface ScheduleMapper {
 
     @Mapping(source = "route.originCity", target = "originCity")
     @Mapping(source = "route.destinationCity", target = "destinationCity")
+    @Mapping(source = "route.transportMode", target = "transportMode")
     @Mapping(target = "scheduleId", source = "id")
     @Mapping(target = "routeId", source = "route.id")
     @Mapping(target = "dynamicPrice", ignore = true)

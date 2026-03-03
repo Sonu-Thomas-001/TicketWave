@@ -1,33 +1,102 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Calendar, MapPin, Clock, Users, Share2, Heart,
-  ArrowLeft, ChevronRight, Tag, Shield, Ticket,
+  ArrowLeft, ChevronRight, Tag, Shield, Ticket, Loader2,
 } from 'lucide-react';
 import {
   Button, Badge, Card, CardContent, CardHeader, CardTitle,
   Separator, Tabs, TabsList, TabsTrigger, TabsContent,
 } from '@/components/ui';
 import SeatMap from '@/components/features/SeatMap';
-import { mockEvents, generateSeatMap } from '@/lib/mockData';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { fadeInUp } from '@/lib/animations';
+import { api } from '@/lib/api';
+
+/**
+ * Build a SeatMap-compatible structure from API seat data.
+ * Groups seats by class (section) with rows/numbers.
+ */
+function buildSeatMap(apiSeats, baseFare) {
+  const sections = {};
+  const priceMap = { BUSINESS: 1.5, FIRST: 2.0, ECONOMY: 1.0 };
+  const sectionNames = { BUSINESS: 'Premium', FIRST: 'VIP', ECONOMY: 'Standard' };
+
+  apiSeats.forEach((s) => {
+    const seatNum = s.seatNumber || '';
+    const row = seatNum.replace(/[0-9]/g, '') || 'A';
+    const num = parseInt(seatNum.replace(/[^0-9]/g, ''), 10) || 1;
+    const sectionKey = sectionNames[s.seatClass] || 'Standard';
+    const price = Math.round(Number(baseFare) * (priceMap[s.seatClass] || 1));
+
+    let status = 'available';
+    if (s.seatStatus === 'HELD') status = 'held';
+    else if (s.seatStatus === 'BOOKED') status = 'sold';
+    else if (s.seatStatus === 'BLOCKED') status = 'sold';
+
+    if (!sections[sectionKey]) sections[sectionKey] = [];
+    sections[sectionKey].push({
+      id: s.id,
+      section: sectionKey,
+      row,
+      number: num,
+      label: seatNum,
+      price,
+      status,
+    });
+  });
+
+  // Sort seats within each section
+  Object.keys(sections).forEach((key) => {
+    sections[key].sort((a, b) => a.row.localeCompare(b.row) || a.number - b.number);
+  });
+
+  return sections;
+}
 
 export default function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [liked, setLiked] = useState(false);
+  const [schedule, setSchedule] = useState(null);
+  const [seatMap, setSeatMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const event = mockEvents.find((e) => e.id === id);
-  const seatMap = useMemo(() => generateSeatMap(), []);
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    Promise.all([
+      api.get(`/schedules/${id}`),
+      api.get(`/schedules/${id}/seats`),
+    ])
+      .then(([schedRes, seatsRes]) => {
+        const sched = schedRes.data;
+        setSchedule(sched);
+        const seats = seatsRes.data || [];
+        const map = buildSeatMap(seats, sched.baseFare || sched.dynamicPrice || 100);
+        setSeatMap(map);
+      })
+      .catch((err) => setError(err.message || 'Failed to load schedule'))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  if (!event) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Loading schedule...</span>
+      </div>
+    );
+  }
+
+  if (error || !schedule) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold mb-4">Event not found</h2>
-        <Button onClick={() => navigate('/events')}>Browse Events</Button>
+        <h2 className="text-2xl font-bold mb-4">{error || 'Schedule not found'}</h2>
+        <Button onClick={() => navigate(-1)}>Go Back</Button>
       </div>
     );
   }
@@ -36,7 +105,7 @@ export default function EventDetailPage() {
 
   const handleProceedToCheckout = () => {
     navigate('/checkout', {
-      state: { event, selectedSeats, totalPrice },
+      state: { schedule, selectedSeats, totalPrice, scheduleId: id },
     });
   };
 
@@ -50,31 +119,23 @@ export default function EventDetailPage() {
         <ChevronRight className="h-3 w-3" />
         <span>Events</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-foreground">{event.title}</span>
+        <span className="text-foreground">{schedule.originCity} → {schedule.destinationCity}</span>
       </motion.div>
 
       {/* Hero Banner */}
       <motion.div
         {...fadeInUp}
         transition={{ delay: 0.1 }}
-        className="relative h-64 md:h-80 lg:h-96 rounded-3xl overflow-hidden"
+        className="relative h-48 md:h-64 rounded-3xl overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-600"
       >
-        <img
-          src={event.imageUrl}
-          alt={event.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-2 mb-3">
-            <Badge className="text-xs">{event.category}</Badge>
-            {event.featured && <Badge variant="warning" className="text-xs">Featured</Badge>}
+            <Badge className="text-xs">{schedule.vehicleNumber}</Badge>
+            {schedule.demandFactor > 1 && <Badge variant="warning" className="text-xs">High Demand</Badge>}
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">{event.title}</h1>
-          {event.artist && (
-            <p className="text-lg text-white/80">by {event.artist}</p>
-          )}
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">{schedule.originCity} → {schedule.destinationCity}</h1>
+          <p className="text-lg text-white/80">{schedule.vehicleNumber} • {schedule.durationMinutes ? `${Math.floor(schedule.durationMinutes / 60)}h ${schedule.durationMinutes % 60}m` : ''}</p>
         </div>
         <div className="absolute top-4 right-4 flex gap-2">
           <Button
@@ -108,8 +169,9 @@ export default function EventDetailPage() {
                       <Calendar className="h-5 w-5 text-indigo-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Date</p>
-                      <p className="font-medium">{formatDate(event.date)}</p>
+                      <p className="text-sm text-muted-foreground">Departure</p>
+                      <p className="font-medium">{schedule.departureTime ? new Date(schedule.departureTime).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-xs text-muted-foreground">{schedule.departureTime ? new Date(schedule.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -117,8 +179,9 @@ export default function EventDetailPage() {
                       <Clock className="h-5 w-5 text-indigo-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Time</p>
-                      <p className="font-medium">{formatTime(event.date)}</p>
+                      <p className="text-sm text-muted-foreground">Arrival</p>
+                      <p className="font-medium">{schedule.arrivalTime ? new Date(schedule.arrivalTime).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-xs text-muted-foreground">{schedule.arrivalTime ? new Date(schedule.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -126,9 +189,9 @@ export default function EventDetailPage() {
                       <MapPin className="h-5 w-5 text-indigo-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Venue</p>
-                      <p className="font-medium">{event.venue}</p>
-                      <p className="text-xs text-muted-foreground">{event.city}</p>
+                      <p className="text-sm text-muted-foreground">Route</p>
+                      <p className="font-medium">{schedule.originCity} → {schedule.destinationCity}</p>
+                      <p className="text-xs text-muted-foreground">{schedule.vehicleNumber}</p>
                     </div>
                   </div>
                 </div>
@@ -161,9 +224,8 @@ export default function EventDetailPage() {
                   <CardContent className="p-6 prose dark:prose-invert max-w-none">
                     <h3>About this Event</h3>
                     <p className="text-muted-foreground">
-                      Experience an unforgettable evening at {event.venue} in {event.city}.
-                      This {event.category.toLowerCase()} event promises to deliver an extraordinary
-                      performance that you'll remember for years to come.
+                      Travel from {schedule.originCity} to {schedule.destinationCity} on vehicle {schedule.vehicleNumber}.
+                      Base fare starts at {formatCurrency(Number(schedule.baseFare || 0))} with dynamic pricing based on demand.
                     </p>
                     <h4>What to Expect</h4>
                     <ul className="text-muted-foreground space-y-2">
@@ -185,11 +247,11 @@ export default function EventDetailPage() {
               <TabsContent value="venue">
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg mb-4">{event.venue}</h3>
-                    <p className="text-muted-foreground mb-4">{event.city}</p>
+                    <h3 className="font-semibold text-lg mb-4">{schedule.originCity} → {schedule.destinationCity}</h3>
+                    <p className="text-muted-foreground mb-4">Vehicle: {schedule.vehicleNumber}</p>
                     <div className="h-48 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
                       <MapPin className="h-8 w-8 mr-2" />
-                      Map placeholder — integrates with Google Maps
+                      Route map placeholder
                     </div>
                   </CardContent>
                 </Card>
@@ -205,20 +267,24 @@ export default function EventDetailPage() {
               <CardTitle className="text-lg">Booking Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Price range */}
+              {/* Price */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Price range</span>
-                <span className="font-medium">
-                  {formatCurrency(event.price.min)} – {formatCurrency(event.price.max)}
-                </span>
+                <span className="text-sm text-muted-foreground">Base fare</span>
+                <span className="font-medium">{formatCurrency(Number(schedule.baseFare || 0))}</span>
               </div>
+              {schedule.dynamicPrice && Number(schedule.dynamicPrice) !== Number(schedule.baseFare) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Dynamic price</span>
+                  <span className="font-medium text-amber-600">{formatCurrency(Number(schedule.dynamicPrice))}</span>
+                </div>
+              )}
 
               {/* Availability */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Available</span>
                 <div className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{event.availableSeats.toLocaleString()}</span>
+                  <span className="font-medium">{schedule.availableSeats || 0} / {schedule.totalSeats || 0}</span>
                 </div>
               </div>
 

@@ -23,6 +23,7 @@ public class ScheduleSearchResult {
     private String originCity;
     private String destinationCity;
     private String vehicleNumber;
+    private String transportMode;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime departureTime;

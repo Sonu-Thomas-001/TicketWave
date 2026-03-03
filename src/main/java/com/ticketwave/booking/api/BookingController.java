@@ -18,6 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -132,7 +135,7 @@ public class BookingController {
 
             // Get current user
             String username = authentication.getName();
-            User user = userRepository.findByEmail(username)
+            User user = userRepository.findById(UUID.fromString(username))
                     .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
             // Get schedule
@@ -210,6 +213,97 @@ public class BookingController {
     private String buildPaymentLink(String intentId) {
         // In production: Redirect to payment gateway (Stripe, PayPal, etc.)
         return "https://payment-gateway.example.com/checkout?intentId=" + intentId;
+    }
+
+    // ===== GET Endpoints =====
+
+    /**
+     * Get all bookings for the authenticated user.
+     */
+    @GetMapping
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getUserBookings(
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User user = userRepository.findById(UUID.fromString(username))
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        var bookings = bookingRepository.findAll().stream()
+                .filter(b -> b.getUser().getId().equals(user.getId()))
+                .map(b -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("bookingId", b.getId());
+                    data.put("pnr", b.getPnr());
+                    data.put("bookingStatus", b.getBookingStatus());
+                    data.put("totalAmount", b.getTotalAmount());
+                    data.put("bookedAt", b.getBookedAt());
+
+                    // Schedule info
+                    Map<String, Object> scheduleInfo = new HashMap<>();
+                    scheduleInfo.put("scheduleId", b.getSchedule().getId());
+                    scheduleInfo.put("origin", b.getSchedule().getRoute().getOriginCity());
+                    scheduleInfo.put("destination", b.getSchedule().getRoute().getDestinationCity());
+                    scheduleInfo.put("departureTime", b.getSchedule().getDepartureTime());
+                    scheduleInfo.put("arrivalTime", b.getSchedule().getArrivalTime());
+                    scheduleInfo.put("vehicleNumber", b.getSchedule().getVehicleNumber());
+                    data.put("schedule", scheduleInfo);
+
+                    data.put("itemCount", b.getBookingItems().size());
+                    return data;
+                })
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.success("Bookings retrieved", bookings));
+    }
+
+    /**
+     * Get a specific booking by ID.
+     */
+    @GetMapping("/{bookingId}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getBooking(
+            @PathVariable UUID bookingId,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User user = userRepository.findById(UUID.fromString(username))
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        var booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        if (!booking.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure("Not authorized to view this booking"));
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("bookingId", booking.getId());
+        data.put("pnr", booking.getPnr());
+        data.put("bookingStatus", booking.getBookingStatus());
+        data.put("totalAmount", booking.getTotalAmount());
+        data.put("bookedAt", booking.getBookedAt());
+
+        Map<String, Object> scheduleInfo = new HashMap<>();
+        scheduleInfo.put("scheduleId", booking.getSchedule().getId());
+        scheduleInfo.put("origin", booking.getSchedule().getRoute().getOriginCity());
+        scheduleInfo.put("destination", booking.getSchedule().getRoute().getDestinationCity());
+        scheduleInfo.put("departureTime", booking.getSchedule().getDepartureTime());
+        scheduleInfo.put("arrivalTime", booking.getSchedule().getArrivalTime());
+        data.put("schedule", scheduleInfo);
+
+        List<Map<String, Object>> items = booking.getBookingItems().stream()
+                .map(item -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("seatNumber", item.getSeat().getSeatNumber());
+                    m.put("seatClass", item.getSeat().getClass_());
+                    m.put("fare", item.getFare());
+                    return m;
+                }).toList();
+        data.put("bookingItems", items);
+
+        return ResponseEntity.ok(ApiResponse.success("Booking retrieved", data));
     }
 
     // ===== Request DTOs =====

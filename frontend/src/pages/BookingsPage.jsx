@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +6,7 @@ import {
   Ticket, ChevronRight, Download, RefreshCw,
   XCircle, AlertTriangle, RotateCcw, Eye,
   ArrowUpDown, CheckCircle2, Timer, Ban,
-  ReceiptText, Mail,
+  ReceiptText, Mail, Loader2,
 } from 'lucide-react';
 import {
   Button, Input, Card, CardContent, CardHeader, CardTitle,
@@ -14,9 +14,9 @@ import {
   Tabs, TabsList, TabsTrigger, TabsContent,
   Pagination,
 } from '@/components/ui';
-import { mockBookings } from '@/lib/mockData';
 import { formatCurrency, formatDate, formatTime, cn } from '@/lib/utils';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+import { api } from '@/lib/api';
 
 const statusConfig = {
   CONFIRMED: { variant: 'success', icon: CheckCircle2, label: 'Confirmed' },
@@ -27,14 +27,14 @@ const statusConfig = {
 const PAGE_SIZE = 5;
 
 /* ---------- PNR Lookup Card ---------- */
-function PNRLookup() {
+function PNRLookup({ bookings }) {
   const [pnr, setPnr] = useState('');
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
 
   const handleLookup = () => {
-    const found = mockBookings.find(
-      (b) => b.id.toLowerCase() === pnr.toLowerCase()
+    const found = bookings.find(
+      (b) => b.pnr?.toLowerCase() === pnr.toLowerCase() || b.id?.toLowerCase() === pnr.toLowerCase()
     );
     if (found) {
       setResult(found);
@@ -166,12 +166,44 @@ export default function BookingsPage() {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [cancelledIds, setCancelledIds] = useState(new Set());
+  const [apiBookings, setApiBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchBookings() {
+      setLoading(true);
+      try {
+        const res = await api.get('/bookings');
+        if (!ignore && res.data?.success && Array.isArray(res.data.data)) {
+          const mapped = res.data.data.map((b) => ({
+            id: b.bookingId || b.pnr,
+            pnr: b.pnr,
+            eventTitle: b.schedule ? `${b.schedule.origin} → ${b.schedule.destination}` : 'N/A',
+            date: b.schedule?.departureTime || b.bookedAt,
+            venue: b.schedule?.vehicleNumber || '',
+            status: (b.bookingStatus || 'PENDING').replace('PAYMENT_PENDING', 'PENDING'),
+            total: b.totalAmount || 0,
+            seats: Array.from({ length: b.itemCount || 0 }, (_, i) => `Seat ${i + 1}`),
+          }));
+          setApiBookings(mapped);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    fetchBookings();
+    return () => { ignore = true; };
+  }, []);
 
   const bookingsWithCancels = useMemo(
-    () => mockBookings.map((b) =>
+    () => apiBookings.map((b) =>
       cancelledIds.has(b.id) ? { ...b, status: 'CANCELLED' } : b
     ),
-    [cancelledIds]
+    [cancelledIds, apiBookings]
   );
 
   const filtered = useMemo(() => {
@@ -207,6 +239,25 @@ export default function BookingsPage() {
     setCancelledIds((prev) => new Set([...prev, id]));
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-20 text-center">
+        <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Failed to load bookings</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-8">
       {/* Header */}
@@ -235,7 +286,7 @@ export default function BookingsPage() {
 
       {/* PNR Lookup */}
       <motion.div {...fadeInUp} transition={{ delay: 0.1 }}>
-        <PNRLookup />
+        <PNRLookup bookings={apiBookings} />
       </motion.div>
 
       {/* Filters */}

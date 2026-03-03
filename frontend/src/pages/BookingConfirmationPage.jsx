@@ -41,13 +41,14 @@ function Confetti() {
 export default function BookingConfirmationPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { event, selectedSeats, totalPrice, passengers } = location.state || {};
+  const { event, schedule, selectedSeats, totalPrice, passengers, bookingId: apiBid, pnr: apiPnr, bookingStatus } = location.state || {};
+  const scheduleData = schedule || event;
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
 
-  const bookingId = useRef(`TW-${Date.now().toString(36).toUpperCase()}`).current;
+  const bookingId = useRef(apiBid || `TW-${Date.now().toString(36).toUpperCase()}`).current;
   const pnr = useRef(
-    Math.random().toString(36).substring(2, 8).toUpperCase()
+    apiPnr || Math.random().toString(36).substring(2, 8).toUpperCase()
   ).current;
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function BookingConfirmationPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!event || !selectedSeats?.length) {
+  if (!scheduleData || !selectedSeats?.length) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <Ticket className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
@@ -134,17 +135,19 @@ export default function BookingConfirmationPage() {
           <Card>
             <CardContent className="p-6 space-y-5">
               <div className="flex gap-4">
-                <img src={event.imageUrl} alt={event.title} className="w-28 h-28 rounded-xl object-cover" loading="lazy" />
+                <div className="w-28 h-28 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                  {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                </div>
                 <div className="space-y-1.5">
-                  <h3 className="font-semibold text-lg">{event.title}</h3>
+                  <h3 className="font-semibold text-lg">{scheduleData.originCity} → {scheduleData.destinationCity}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" /> {formatDate(event.date)}
+                    <Calendar className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : 'N/A'}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" /> {formatTime(event.date)}
+                    <Clock className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" /> {event.venue}, {event.city}
+                    <MapPin className="h-3.5 w-3.5" /> {scheduleData.vehicleNumber || 'N/A'}
                   </div>
                 </div>
               </div>

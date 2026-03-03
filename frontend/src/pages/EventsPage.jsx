@@ -1,15 +1,43 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Grid3X3, List, X } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid3X3, List, X, Loader2 } from 'lucide-react';
 import { Button, Input, Badge, Card, Separator } from '@/components/ui';
 import { EventCard } from '@/components/shared';
-import { mockEvents, mockCategories } from '@/lib/mockData';
+import { api } from '@/lib/api';
 import { staggerContainer, fadeInUp } from '@/lib/animations';
+
+/** Map a schedule API object into the shape EventCard expects. */
+function mapScheduleToEvent(s) {
+  return {
+    id: s.scheduleId,
+    title: `${s.originCity} → ${s.destinationCity}`,
+    venue: s.vehicleNumber,
+    city: s.originCity,
+    date: s.departureTime,
+    imageUrl: `/images/event-${(s.transportMode || 'BUS').toLowerCase()}.svg`,
+    price: { min: Number(s.dynamicPrice || s.baseFare), max: Number(s.dynamicPrice || s.baseFare) * 1.5 },
+    totalSeats: s.totalSeats,
+    availableSeats: s.availableSeats,
+    tags: [s.transportMode || 'BUS'],
+    category: (s.transportMode || 'BUS').toLowerCase(),
+    featured: (s.availabilityPercentage ?? 100) < 30,
+  };
+}
+
+const browseCategories = [
+  { id: 'all', label: 'All Schedules' },
+  { id: 'bus', label: 'Bus' },
+  { id: 'train', label: 'Train' },
+  { id: 'flight', label: 'Flight' },
+];
 
 export default function EventsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState('grid');
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     query: searchParams.get('q') || '',
     category: searchParams.get('cat') || 'all',
@@ -17,8 +45,28 @@ export default function EventsPage() {
     sortBy: 'date',
   });
 
+  // Fetch all schedules from API on mount
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.get('/schedules/browse')
+      .then((res) => {
+        if (!cancelled) {
+          const data = res.data ?? res;
+          setSchedules(Array.isArray(data) ? data.map(mapScheduleToEvent) : []);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const filteredEvents = useMemo(() => {
-    let events = [...mockEvents];
+    let events = [...schedules];
 
     if (filters.query) {
       const q = filters.query.toLowerCase();
@@ -26,8 +74,7 @@ export default function EventsPage() {
         (e) =>
           e.title.toLowerCase().includes(q) ||
           e.venue.toLowerCase().includes(q) ||
-          e.city.toLowerCase().includes(q) ||
-          e.artist?.toLowerCase().includes(q)
+          e.city.toLowerCase().includes(q)
       );
     }
     if (filters.category !== 'all') {
@@ -42,7 +89,7 @@ export default function EventsPage() {
     else events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     return events;
-  }, [filters]);
+  }, [filters, schedules]);
 
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -59,9 +106,9 @@ export default function EventsPage() {
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-8">
       {/* Header */}
       <motion.div {...fadeInUp}>
-        <h1 className="text-3xl font-bold mb-2">Browse Events</h1>
+        <h1 className="text-3xl font-bold mb-2">Browse Schedules</h1>
         <p className="text-muted-foreground">
-          {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
+          {loading ? 'Loading...' : `${filteredEvents.length} schedule${filteredEvents.length !== 1 ? 's' : ''} found`}
         </p>
       </motion.div>
 
@@ -112,7 +159,7 @@ export default function EventsPage() {
 
           {/* Category chips */}
           <div className="flex items-center gap-2 flex-wrap">
-            {[{ id: 'all', label: 'All Events' }, ...mockCategories.filter((c) => c.id !== 'all')].map((cat) => (
+            {browseCategories.map((cat) => (
               <Badge
                 key={cat.id}
                 variant={filters.category === cat.id ? 'default' : 'secondary'}
@@ -156,7 +203,19 @@ export default function EventsPage() {
       </motion.div>
 
       {/* Results */}
-      {filteredEvents.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading schedules...</span>
+        </div>
+      ) : error ? (
+        <motion.div {...fadeInUp} className="text-center py-20">
+          <Search className="h-16 w-16 text-destructive/30 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Failed to load schedules</h3>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+        </motion.div>
+      ) : filteredEvents.length > 0 ? (
         <motion.div
           variants={staggerContainer}
           initial="initial"
