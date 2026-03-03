@@ -128,6 +128,77 @@ public class DataInitializer implements CommandLineRunner {
                 LocalDateTime.of(2026, 3, 15, 18, 0),
                 120, new BigDecimal("120"));
 
+        // ── Concert / Event Routes ──
+        // For concerts: originCity = event name, destinationCity = city, vehicleNumber = venue
+        Route taylorSwift = createRoute("Taylor Swift | The Eras Tour", "New York", "CONCERT",
+                "The Eras Tour — a journey through Taylor Swift's musical eras");
+        Route coldplay = createRoute("Coldplay | Music of the Spheres", "Mumbai", "CONCERT",
+                "Coldplay's spectacular Music of the Spheres World Tour");
+        Route arRahman = createRoute("A.R. Rahman Live", "Chennai", "CONCERT",
+                "The Mozart of Madras performs his greatest hits live");
+        Route arijitSingh = createRoute("Arijit Singh Live in Concert", "Delhi", "CONCERT",
+                "India's most soulful voice — live and unplugged");
+        Route edSheeran = createRoute("Ed Sheeran | Mathematics Tour", "London", "CONCERT",
+                "Ed Sheeran's record-breaking Mathematics World Tour");
+        Route weeknd = createRoute("The Weeknd | After Hours", "Los Angeles", "CONCERT",
+                "After Hours Til Dawn — a cinematic concert experience");
+
+        // Concerts — Taylor Swift
+        createScheduleWithSeats(taylorSwift, "MetLife Stadium",
+                LocalDateTime.of(2026, 4, 18, 19, 0),
+                LocalDateTime.of(2026, 4, 18, 23, 0),
+                60, new BigDecimal("250"));
+
+        createScheduleWithSeats(taylorSwift, "MetLife Stadium",
+                LocalDateTime.of(2026, 4, 19, 19, 0),
+                LocalDateTime.of(2026, 4, 19, 23, 0),
+                60, new BigDecimal("280"));
+
+        // Concerts — Coldplay
+        createScheduleWithSeats(coldplay, "DY Patil Stadium",
+                LocalDateTime.of(2026, 3, 22, 18, 30),
+                LocalDateTime.of(2026, 3, 22, 22, 30),
+                80, new BigDecimal("4500"));
+
+        createScheduleWithSeats(coldplay, "DY Patil Stadium",
+                LocalDateTime.of(2026, 3, 23, 18, 30),
+                LocalDateTime.of(2026, 3, 23, 22, 30),
+                80, new BigDecimal("5000"));
+
+        // Concerts — A.R. Rahman
+        createScheduleWithSeats(arRahman, "Nehru Indoor Stadium",
+                LocalDateTime.of(2026, 4, 5, 18, 0),
+                LocalDateTime.of(2026, 4, 5, 22, 0),
+                50, new BigDecimal("2000"));
+
+        // Concerts — Arijit Singh
+        createScheduleWithSeats(arijitSingh, "Jawaharlal Nehru Stadium",
+                LocalDateTime.of(2026, 3, 29, 19, 0),
+                LocalDateTime.of(2026, 3, 29, 23, 0),
+                70, new BigDecimal("1500"));
+
+        createScheduleWithSeats(arijitSingh, "Jawaharlal Nehru Stadium",
+                LocalDateTime.of(2026, 3, 30, 19, 0),
+                LocalDateTime.of(2026, 3, 30, 23, 0),
+                70, new BigDecimal("1800"));
+
+        // Concerts — Ed Sheeran
+        createScheduleWithSeats(edSheeran, "Wembley Stadium",
+                LocalDateTime.of(2026, 5, 10, 19, 30),
+                LocalDateTime.of(2026, 5, 10, 23, 0),
+                100, new BigDecimal("150"));
+
+        createScheduleWithSeats(edSheeran, "Wembley Stadium",
+                LocalDateTime.of(2026, 5, 11, 19, 30),
+                LocalDateTime.of(2026, 5, 11, 23, 0),
+                100, new BigDecimal("175"));
+
+        // Concerts — The Weeknd
+        createScheduleWithSeats(weeknd, "SoFi Stadium",
+                LocalDateTime.of(2026, 4, 25, 20, 0),
+                LocalDateTime.of(2026, 4, 26, 0, 0),
+                90, new BigDecimal("200"));
+
         log.info("Seed data created successfully: {} routes, {} schedules",
                 routeRepository.count(), scheduleRepository.count());
     }

@@ -136,10 +136,10 @@ export default function BookingConfirmationPage() {
             <CardContent className="p-6 space-y-5">
               <div className="flex gap-4">
                 <div className="w-28 h-28 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
-                  {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                  {scheduleData.transportMode === 'CONCERT' ? '🎵' : `${scheduleData.originCity?.charAt(0)}${scheduleData.destinationCity?.charAt(0)}`}
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="font-semibold text-lg">{scheduleData.originCity} → {scheduleData.destinationCity}</h3>
+                  <h3 className="font-semibold text-lg">{scheduleData.transportMode === 'CONCERT' ? scheduleData.originCity : `${scheduleData.originCity} → ${scheduleData.destinationCity}`}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : 'N/A'}
                   </div>

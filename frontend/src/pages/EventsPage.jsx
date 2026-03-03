@@ -9,24 +9,27 @@ import { staggerContainer, fadeInUp } from '@/lib/animations';
 
 /** Map a schedule API object into the shape EventCard expects. */
 function mapScheduleToEvent(s) {
+  const mode = (s.transportMode || 'BUS').toUpperCase();
+  const isConcert = mode === 'CONCERT';
   return {
     id: s.scheduleId,
-    title: `${s.originCity} → ${s.destinationCity}`,
+    title: isConcert ? s.originCity : `${s.originCity} → ${s.destinationCity}`,
     venue: s.vehicleNumber,
-    city: s.originCity,
+    city: isConcert ? s.destinationCity : s.originCity,
     date: s.departureTime,
-    imageUrl: `/images/event-${(s.transportMode || 'BUS').toLowerCase()}.svg`,
+    imageUrl: `/images/event-${mode.toLowerCase()}.svg`,
     price: { min: Number(s.dynamicPrice || s.baseFare), max: Number(s.dynamicPrice || s.baseFare) * 1.5 },
     totalSeats: s.totalSeats,
     availableSeats: s.availableSeats,
-    tags: [s.transportMode || 'BUS'],
-    category: (s.transportMode || 'BUS').toLowerCase(),
-    featured: (s.availabilityPercentage ?? 100) < 30,
+    tags: isConcert ? ['Concert', 'Live', 'Music'] : [s.transportMode || 'BUS'],
+    category: mode.toLowerCase(),
+    featured: isConcert || (s.availabilityPercentage ?? 100) < 30,
   };
 }
 
 const browseCategories = [
-  { id: 'all', label: 'All Schedules' },
+  { id: 'all', label: 'All Events' },
+  { id: 'concert', label: 'Concerts' },
   { id: 'bus', label: 'Bus' },
   { id: 'train', label: 'Train' },
   { id: 'flight', label: 'Flight' },

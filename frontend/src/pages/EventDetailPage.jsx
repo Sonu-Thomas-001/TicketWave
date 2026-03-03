@@ -102,6 +102,9 @@ export default function EventDetailPage() {
   }
 
   const totalPrice = selectedSeats.reduce((sum, s) => sum + s.price, 0);
+  const isConcert = schedule.transportMode === 'CONCERT';
+  const displayTitle = isConcert ? schedule.originCity : `${schedule.originCity} → ${schedule.destinationCity}`;
+  const displaySubtitle = isConcert ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : `${schedule.vehicleNumber} • ${schedule.durationMinutes ? `${Math.floor(schedule.durationMinutes / 60)}h ${schedule.durationMinutes % 60}m` : ''}`;
 
   const handleProceedToCheckout = () => {
     navigate('/checkout', {
@@ -119,7 +122,7 @@ export default function EventDetailPage() {
         <ChevronRight className="h-3 w-3" />
         <span>Events</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-foreground">{schedule.originCity} → {schedule.destinationCity}</span>
+        <span className="text-foreground">{displayTitle}</span>
       </motion.div>
 
       {/* Hero Banner */}
@@ -134,8 +137,8 @@ export default function EventDetailPage() {
             <Badge className="text-xs">{schedule.vehicleNumber}</Badge>
             {schedule.demandFactor > 1 && <Badge variant="warning" className="text-xs">High Demand</Badge>}
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">{schedule.originCity} → {schedule.destinationCity}</h1>
-          <p className="text-lg text-white/80">{schedule.vehicleNumber} • {schedule.durationMinutes ? `${Math.floor(schedule.durationMinutes / 60)}h ${schedule.durationMinutes % 60}m` : ''}</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">{displayTitle}</h1>
+          <p className="text-lg text-white/80">{displaySubtitle}</p>
         </div>
         <div className="absolute top-4 right-4 flex gap-2">
           <Button
@@ -189,9 +192,9 @@ export default function EventDetailPage() {
                       <MapPin className="h-5 w-5 text-indigo-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Route</p>
-                      <p className="font-medium">{schedule.originCity} → {schedule.destinationCity}</p>
-                      <p className="text-xs text-muted-foreground">{schedule.vehicleNumber}</p>
+                      <p className="text-sm text-muted-foreground">{isConcert ? 'Venue' : 'Route'}</p>
+                      <p className="font-medium">{displayTitle}</p>
+                      <p className="text-xs text-muted-foreground">{isConcert ? `${schedule.vehicleNumber}, ${schedule.destinationCity}` : schedule.vehicleNumber}</p>
                     </div>
                   </div>
                 </div>
@@ -224,8 +227,10 @@ export default function EventDetailPage() {
                   <CardContent className="p-6 prose dark:prose-invert max-w-none">
                     <h3>About this Event</h3>
                     <p className="text-muted-foreground">
-                      Travel from {schedule.originCity} to {schedule.destinationCity} on vehicle {schedule.vehicleNumber}.
-                      Base fare starts at {formatCurrency(Number(schedule.baseFare || 0))} with dynamic pricing based on demand.
+                      {isConcert
+                        ? `Live concert at ${schedule.vehicleNumber}, ${schedule.destinationCity}. Don't miss this amazing experience!`
+                        : `Travel from ${schedule.originCity} to ${schedule.destinationCity} on vehicle ${schedule.vehicleNumber}.`}
+                      {' '}Base fare starts at {formatCurrency(Number(schedule.baseFare || 0))} with dynamic pricing based on demand.
                     </p>
                     <h4>What to Expect</h4>
                     <ul className="text-muted-foreground space-y-2">
@@ -247,11 +252,11 @@ export default function EventDetailPage() {
               <TabsContent value="venue">
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg mb-4">{schedule.originCity} → {schedule.destinationCity}</h3>
-                    <p className="text-muted-foreground mb-4">Vehicle: {schedule.vehicleNumber}</p>
+                    <h3 className="font-semibold text-lg mb-4">{displayTitle}</h3>
+                    <p className="text-muted-foreground mb-4">{isConcert ? `Venue: ${schedule.vehicleNumber}` : `Vehicle: ${schedule.vehicleNumber}`}</p>
                     <div className="h-48 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
                       <MapPin className="h-8 w-8 mr-2" />
-                      Route map placeholder
+                      {isConcert ? 'Venue map placeholder' : 'Route map placeholder'}
                     </div>
                   </CardContent>
                 </Card>

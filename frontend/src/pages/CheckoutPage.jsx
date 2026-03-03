@@ -273,10 +273,10 @@ export default function CheckoutPage() {
                   <CardContent className="space-y-4">
                     <div className="flex gap-4">
                       <div className="w-24 h-24 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                        {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                        {scheduleData.transportMode === 'CONCERT' ? '🎵' : `${scheduleData.originCity?.charAt(0)}${scheduleData.destinationCity?.charAt(0)}`}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{scheduleData.originCity} → {scheduleData.destinationCity}</h3>
+                        <h3 className="font-semibold">{scheduleData.transportMode === 'CONCERT' ? scheduleData.originCity : `${scheduleData.originCity} → ${scheduleData.destinationCity}`}</h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                           <Calendar className="h-3.5 w-3.5" /> {scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : 'N/A'}
                         </div>
@@ -445,10 +445,10 @@ export default function CheckoutPage() {
               <CardContent className="space-y-4">
                 <div className="flex gap-3">
                   <div className="w-16 h-16 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
-                    {scheduleData.originCity?.charAt(0)}{scheduleData.destinationCity?.charAt(0)}
+                    {scheduleData.transportMode === 'CONCERT' ? '🎵' : `${scheduleData.originCity?.charAt(0)}${scheduleData.destinationCity?.charAt(0)}`}
                   </div>
                   <div>
-                    <p className="font-medium text-sm line-clamp-2">{scheduleData.originCity} → {scheduleData.destinationCity}</p>
+                    <p className="font-medium text-sm line-clamp-2">{scheduleData.transportMode === 'CONCERT' ? scheduleData.originCity : `${scheduleData.originCity} → ${scheduleData.destinationCity}`}</p>
                     <p className="text-xs text-muted-foreground">{scheduleData.departureTime ? new Date(scheduleData.departureTime).toLocaleDateString() : ''}</p>
                   </div>
                 </div>
