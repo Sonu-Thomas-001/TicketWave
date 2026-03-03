@@ -176,17 +176,25 @@ export default function BookingsPage() {
       setLoading(true);
       try {
         const res = await api.get('/bookings');
-        if (!ignore && res.data?.success && Array.isArray(res.data.data)) {
-          const mapped = res.data.data.map((b) => ({
-            id: b.bookingId || b.pnr,
-            pnr: b.pnr,
-            eventTitle: b.schedule ? `${b.schedule.origin} → ${b.schedule.destination}` : 'N/A',
-            date: b.schedule?.departureTime || b.bookedAt,
-            venue: b.schedule?.vehicleNumber || '',
-            status: (b.bookingStatus || 'PENDING').replace('PAYMENT_PENDING', 'PENDING'),
-            total: b.totalAmount || 0,
-            seats: Array.from({ length: b.itemCount || 0 }, (_, i) => `Seat ${i + 1}`),
-          }));
+        const bookingsList = res?.data ?? res ?? [];
+        if (!ignore && Array.isArray(bookingsList)) {
+          const EVENT_TYPES = ['CONCERT', 'SPORTS', 'THEATRE', 'FESTIVAL', 'SHOW'];
+          const mapped = bookingsList.map((b) => {
+            const isEvent = EVENT_TYPES.includes(b.schedule?.transportMode);
+            return {
+              id: b.bookingId || b.pnr,
+              pnr: b.pnr,
+              eventTitle: b.schedule
+                ? (isEvent ? b.schedule.origin : `${b.schedule.origin} \u2192 ${b.schedule.destination}`)
+                : 'N/A',
+              date: b.schedule?.departureTime || b.bookedAt,
+              venue: b.schedule?.vehicleNumber || '',
+              status: (b.bookingStatus || 'PENDING').replace('PAYMENT_PENDING', 'PENDING'),
+              total: b.totalAmount || 0,
+              seats: Array.from({ length: b.itemCount || 0 }, (_, i) => `Seat ${i + 1}`),
+              transportMode: b.schedule?.transportMode,
+            };
+          });
           setApiBookings(mapped);
         }
       } catch (err) {

@@ -244,6 +244,7 @@ public class BookingController {
                     scheduleInfo.put("scheduleId", b.getSchedule().getId());
                     scheduleInfo.put("origin", b.getSchedule().getRoute().getOriginCity());
                     scheduleInfo.put("destination", b.getSchedule().getRoute().getDestinationCity());
+                    scheduleInfo.put("transportMode", b.getSchedule().getRoute().getTransportMode());
                     scheduleInfo.put("departureTime", b.getSchedule().getDepartureTime());
                     scheduleInfo.put("arrivalTime", b.getSchedule().getArrivalTime());
                     scheduleInfo.put("vehicleNumber", b.getSchedule().getVehicleNumber());
@@ -289,8 +290,10 @@ public class BookingController {
         scheduleInfo.put("scheduleId", booking.getSchedule().getId());
         scheduleInfo.put("origin", booking.getSchedule().getRoute().getOriginCity());
         scheduleInfo.put("destination", booking.getSchedule().getRoute().getDestinationCity());
+        scheduleInfo.put("transportMode", booking.getSchedule().getRoute().getTransportMode());
         scheduleInfo.put("departureTime", booking.getSchedule().getDepartureTime());
         scheduleInfo.put("arrivalTime", booking.getSchedule().getArrivalTime());
+        scheduleInfo.put("vehicleNumber", booking.getSchedule().getVehicleNumber());
         data.put("schedule", scheduleInfo);
 
         List<Map<String, Object>> items = booking.getBookingItems().stream()
