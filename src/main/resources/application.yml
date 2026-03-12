@@ -41,6 +41,7 @@ app:
   payment:
     intent-ttl-hours: ${PAYMENT_INTENT_TTL_HOURS:1}
     webhook-timeout-seconds: ${PAYMENT_WEBHOOK_TIMEOUT_SECONDS:30}
+    webhook-secret: ${PAYMENT_WEBHOOK_SECRET:change-me-in-production}
     provider: ${PAYMENT_PROVIDER:stub}
   idempotency:
     ttl-hours: ${IDEMPOTENCY_TTL_HOURS:24}

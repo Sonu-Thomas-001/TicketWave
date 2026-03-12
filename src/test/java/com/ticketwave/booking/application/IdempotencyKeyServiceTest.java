@@ -2,6 +2,7 @@ package com.ticketwave.booking.application;
 
 import com.ticketwave.booking.domain.IdempotencyKey;
 import com.ticketwave.booking.infrastructure.IdempotencyKeyRepository;
+import com.ticketwave.common.exception.ConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -94,6 +95,25 @@ class IdempotencyKeyServiceTest {
         assertTrue(result.getProcessed());
         assertEquals("{\"data\": \"cached\"}", result.getCachedResponse());
         assertEquals(201, result.getCachedStatusCode());
+    }
+
+    @Test
+    @DisplayName("Should reject idempotency key reused with different payload fingerprint")
+    void testRegisterOrGetKey_ShouldRejectFingerprintMismatch() {
+        // Arrange
+        IdempotencyKey existingKey = IdempotencyKey.builder()
+                .idempotencyKey(testKey)
+                .requestFingerprint("original-fingerprint")
+                .processed(false)
+                .expiresAt(Instant.now().plusSeconds(86400))
+                .build();
+
+        when(repository.findByIdempotencyKey(testKey)).thenReturn(Optional.of(existingKey));
+
+        // Act + Assert
+        assertThrows(ConflictException.class,
+                () -> service.registerOrGetKey(testKey, "different-fingerprint"));
+        verify(repository, never()).save(any(IdempotencyKey.class));
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.ticketwave.payment.api;
 
+import com.ticketwave.booking.application.IdempotencyKeyService;
 import com.ticketwave.booking.application.BookingServiceEnhanced;
-import com.ticketwave.booking.domain.BookingStatus;
 import com.ticketwave.booking.domain.SeatHold;
 import com.ticketwave.booking.infrastructure.BookingRepository;
 import com.ticketwave.common.api.ApiResponse;
@@ -10,15 +10,22 @@ import com.ticketwave.payment.domain.PaymentIntent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +56,11 @@ public class PaymentWebhookController {
     private final PaymentIntentService paymentIntentService;
     private final BookingServiceEnhanced bookingService;
     private final BookingRepository bookingRepository;
+    private final IdempotencyKeyService idempotencyKeyService;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.payment.webhook-secret}")
+    private String webhookSecret;
 
     /**
      * Webhook endpoint for payment confirmation.
@@ -68,14 +79,22 @@ public class PaymentWebhookController {
     @PostMapping("/confirmed")
     @Transactional
     public ResponseEntity<ApiResponse<Map<String, String>>> handlePaymentConfirmed(
-            @RequestBody PaymentWebhookPayload payload) {
+            @RequestBody PaymentWebhookPayload payload,
+            @RequestHeader(name = "X-Webhook-Signature", required = false) String signature) {
 
         log.info("Received payment confirmation webhook - EventId: {} IntentId: {}", 
                 payload.getEventId(), payload.getIntentId());
 
         try {
-            // Verify webhook signature (implement in production)
-            // verifyWebhookSignature(payload, signature);
+            validateRequiredWebhookFields(payload);
+            verifyWebhookSignature(payload, signature);
+
+            String eventId = payload.getEventId();
+            String requestFingerprint = generatePayloadFingerprint(payload);
+            var idempotencyKey = idempotencyKeyService.registerOrGetKey(eventId, requestFingerprint);
+            if (Boolean.TRUE.equals(idempotencyKey.getProcessed()) && !idempotencyKey.isExpired()) {
+                return duplicateWebhookResponse(eventId, payload.getIntentId());
+            }
 
             // Get payment intent
             PaymentIntent paymentIntent = paymentIntentService.getPaymentIntent(payload.getIntentId());
@@ -86,7 +105,7 @@ public class PaymentWebhookController {
                     bookingId, payload.getIntentId());
 
             // Update payment intent status
-            PaymentIntent confirmedIntent = paymentIntentService.confirmPayment(
+            paymentIntentService.confirmPayment(
                     payload.getIntentId(),
                     payload.getTransactionId(),
                     payload.getPaymentMethod()
@@ -125,18 +144,27 @@ public class PaymentWebhookController {
             result.put("pnr", confirmedBooking.getPnr());
             result.put("intentId", payload.getIntentId());
 
+            idempotencyKeyService.markProcessed(eventId, writeResponseSafely(result), HttpStatus.OK.value());
+
             return ResponseEntity.status(HttpStatus.OK)
                     .body(ApiResponse.success("Payment confirmed successfully", result));
+
+        } catch (SecurityException ex) {
+            log.warn("Webhook signature verification failed - EventId: {}", payload.getEventId());
+            Map<String, String> result = new HashMap<>();
+            result.put("status", "UNAUTHORIZED");
+            result.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Invalid webhook signature", result));
 
         } catch (Exception ex) {
             log.error("Error processing payment confirmation webhook - EventId: {}", payload.getEventId(), ex);
 
-            // Return 200 to acknowledge receipt (retry handling in async layer)
             Map<String, String> result = new HashMap<>();
             result.put("status", "ERROR");
             result.put("message", ex.getMessage());
 
-            return ResponseEntity.status(HttpStatus.OK)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.failure("Payment confirmation processing failed", result));
         }
     }
@@ -156,18 +184,29 @@ public class PaymentWebhookController {
     @PostMapping("/failed")
     @Transactional
     public ResponseEntity<ApiResponse<Map<String, String>>> handlePaymentFailed(
-            @RequestBody PaymentWebhookPayload payload) {
+            @RequestBody PaymentWebhookPayload payload,
+            @RequestHeader(name = "X-Webhook-Signature", required = false) String signature) {
 
         log.warn("Received payment failure webhook - EventId: {} IntentId: {}", 
                 payload.getEventId(), payload.getIntentId());
 
         try {
+            validateRequiredWebhookFields(payload);
+            verifyWebhookSignature(payload, signature);
+
+            String eventId = payload.getEventId();
+            String requestFingerprint = generatePayloadFingerprint(payload);
+            var idempotencyKey = idempotencyKeyService.registerOrGetKey(eventId, requestFingerprint);
+            if (Boolean.TRUE.equals(idempotencyKey.getProcessed()) && !idempotencyKey.isExpired()) {
+                return duplicateWebhookResponse(eventId, payload.getIntentId());
+            }
+
             // Get payment intent
             PaymentIntent paymentIntent = paymentIntentService.getPaymentIntent(payload.getIntentId());
             UUID bookingId = paymentIntent.getBooking().getId();
 
             // Update payment intent status
-            PaymentIntent failedIntent = paymentIntentService.failPaymentIntent(
+            paymentIntentService.failPaymentIntent(
                     payload.getIntentId(),
                     payload.getFailureReason(),
                     isRetryable(payload.getFailureReason())
@@ -198,8 +237,18 @@ public class PaymentWebhookController {
             result.put("reason", payload.getFailureReason());
             result.put("retryable", String.valueOf(isRetryable(payload.getFailureReason())));
 
+            idempotencyKeyService.markProcessed(eventId, writeResponseSafely(result), HttpStatus.OK.value());
+
             return ResponseEntity.status(HttpStatus.OK)
                     .body(ApiResponse.success("Payment failure processed", result));
+
+        } catch (SecurityException ex) {
+            log.warn("Webhook signature verification failed - EventId: {}", payload.getEventId());
+            Map<String, String> result = new HashMap<>();
+            result.put("status", "UNAUTHORIZED");
+            result.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure("Invalid webhook signature", result));
 
         } catch (Exception ex) {
             log.error("Error processing payment failure webhook - EventId: {}", payload.getEventId(), ex);
@@ -208,7 +257,7 @@ public class PaymentWebhookController {
             result.put("status", "ERROR");
             result.put("message", ex.getMessage());
 
-            return ResponseEntity.status(HttpStatus.OK)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.failure("Payment failure processing failed", result));
         }
     }
@@ -249,6 +298,69 @@ public class PaymentWebhookController {
             case "insufficient_funds", "card_declined", "invalid_card" -> false;
             default -> false;
         };
+    }
+
+    private void validateRequiredWebhookFields(PaymentWebhookPayload payload) {
+        if (!StringUtils.hasText(payload.getEventId())) {
+            throw new IllegalArgumentException("Webhook eventId is required");
+        }
+        if (!StringUtils.hasText(payload.getIntentId())) {
+            throw new IllegalArgumentException("Webhook intentId is required");
+        }
+    }
+
+    private String generatePayloadFingerprint(PaymentWebhookPayload payload) {
+        try {
+            return idempotencyKeyService.generateFingerprint(objectMapper.writeValueAsString(payload));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to fingerprint webhook payload", ex);
+        }
+    }
+
+    private void verifyWebhookSignature(PaymentWebhookPayload payload, String signature) {
+        if (!StringUtils.hasText(webhookSecret)) {
+            throw new SecurityException("Webhook secret is not configured");
+        }
+        if (!StringUtils.hasText(signature)) {
+            throw new SecurityException("Missing webhook signature");
+        }
+
+        String expectedSignature = computeSignature(payload);
+        if (!MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                signature.getBytes(StandardCharsets.UTF_8))) {
+            throw new SecurityException("Webhook signature mismatch");
+        }
+    }
+
+    private String computeSignature(PaymentWebhookPayload payload) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] digest = mac.doFinal(objectMapper.writeValueAsBytes(payload));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to compute webhook signature", ex);
+        }
+    }
+
+    private String writeResponseSafely(Map<String, String> responseBody) {
+        try {
+            return objectMapper.writeValueAsString(responseBody);
+        } catch (Exception ex) {
+            return "{}";
+        }
+    }
+
+    private ResponseEntity<ApiResponse<Map<String, String>>> duplicateWebhookResponse(String eventId, String intentId) {
+        Map<String, String> result = new HashMap<>();
+        result.put("status", "DUPLICATE_IGNORED");
+        result.put("eventId", eventId);
+        result.put("intentId", intentId);
+
+        log.info("Ignoring duplicate payment webhook eventId: {} intentId: {}", eventId, intentId);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.success("Duplicate webhook ignored", result));
     }
 
     // ===== Request DTOs =====

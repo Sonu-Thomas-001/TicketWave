@@ -49,6 +49,10 @@ public class IdempotencyKeyService {
                 .orElse(null);
 
         if (existingKey != null) {
+            if (!existingKey.getRequestFingerprint().equals(requestFingerprint)) {
+                throw new ConflictException("Idempotency key reused with different request payload");
+            }
+
             // Key already exists
             if (existingKey.getProcessed() && !existingKey.isExpired()) {
                 log.info("Idempotency cache hit for key: {}", idempotencyKey);
