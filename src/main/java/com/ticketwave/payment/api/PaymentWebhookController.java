@@ -62,6 +62,9 @@ public class PaymentWebhookController {
     @Value("${app.payment.webhook-secret}")
     private String webhookSecret;
 
+    @Value("${app.payment.webhook-signature-required:true}")
+    private boolean webhookSignatureRequired;
+
     /**
      * Webhook endpoint for payment confirmation.
      * 
@@ -318,6 +321,11 @@ public class PaymentWebhookController {
     }
 
     private void verifyWebhookSignature(PaymentWebhookPayload payload, String signature) {
+        if (!webhookSignatureRequired) {
+            log.debug("Webhook signature verification disabled for current environment");
+            return;
+        }
+
         if (!StringUtils.hasText(webhookSecret)) {
             throw new SecurityException("Webhook secret is not configured");
         }
